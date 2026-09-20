@@ -6,10 +6,10 @@ export interface PlayerSession {
   name: string;
 }
 
-export function readSession(): PlayerSession | null {
-  if (typeof window === "undefined") return null;
+function readFrom(storage: Storage | undefined): PlayerSession | null {
+  if (!storage) return null;
   try {
-    const raw = localStorage.getItem(SESSION_STORAGE_KEY);
+    const raw = storage.getItem(SESSION_STORAGE_KEY);
     if (!raw) return null;
     return JSON.parse(raw) as PlayerSession;
   } catch {
@@ -17,10 +17,18 @@ export function readSession(): PlayerSession | null {
   }
 }
 
+export function readSession(): PlayerSession | null {
+  if (typeof window === "undefined") return null;
+  return readFrom(window.sessionStorage) ?? readFrom(window.localStorage);
+}
+
 export function writeSession(session: PlayerSession) {
-  localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+  const raw = JSON.stringify(session);
+  window.sessionStorage.setItem(SESSION_STORAGE_KEY, raw);
+  window.localStorage.setItem(SESSION_STORAGE_KEY, raw);
 }
 
 export function clearSession() {
-  localStorage.removeItem(SESSION_STORAGE_KEY);
+  window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
+  window.localStorage.removeItem(SESSION_STORAGE_KEY);
 }
