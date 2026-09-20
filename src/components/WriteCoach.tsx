@@ -23,13 +23,16 @@ import {
   writeWritingDraft,
   type WritingDraft,
 } from "@/lib/client/writing-draft";
+import { cancelSpeech } from "@/lib/client/speech";
 import { countWords, joinEssay } from "@/lib/writing/words";
+import { ChlopiSourceSheet } from "./ChlopiSourceSheet";
 import { ReadAloudButton } from "./ReadAloudButton";
 
 export function WriteCoach() {
   const [draft, setDraft] = useState<WritingDraft>(EMPTY_DRAFT);
   const [copied, setCopied] = useState(false);
   const [showParent, setShowParent] = useState(false);
+  const [showSource, setShowSource] = useState(false);
   const [hintStep, setHintStep] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,6 +55,15 @@ export function WriteCoach() {
     });
     setCopied(false);
     setError(null);
+  }, []);
+
+  const openSource = useCallback(() => {
+    cancelSpeech();
+    setShowSource(true);
+  }, []);
+
+  const closeSource = useCallback(() => {
+    setShowSource(false);
   }, []);
 
   const assembled = useMemo(
@@ -93,10 +105,23 @@ export function WriteCoach() {
 
   return (
     <main lang="pl" className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 px-4 py-6">
-      <header className="space-y-2">
+      <div className="write-toolbar">
         <p className="text-xs font-semibold uppercase tracking-[0.28em] text-lime-300">
           Klasa 8 · do 26 września
         </p>
+        <button
+          type="button"
+          className="btn-source"
+          onClick={openSource}
+          aria-haspopup="dialog"
+          aria-expanded={showSource}
+          aria-label="Czytaj tekst źródłowy"
+        >
+          <BookIcon />
+          Czytaj
+        </button>
+      </div>
+      <header className="space-y-2">
         <h1 className="font-display text-4xl leading-tight">Napisz wypracowanie</h1>
         <p className="text-sm text-white/65">
           Pytanie problemowe · ok. 100 słów. Składasz tekst sama — to nie jest gotowa praca.
@@ -179,7 +204,12 @@ export function WriteCoach() {
       ) : null}
 
       {step < 5 ? (
-        <ReadAloudButton text={spokenText} lang="pl" idleLabel="Czytaj" className="btn-read w-full" />
+        <ReadAloudButton
+          text={spokenText}
+          lang="pl"
+          idleLabel="Na głos"
+          className="btn-read w-full"
+        />
       ) : null}
 
       {error ? (
@@ -218,6 +248,8 @@ export function WriteCoach() {
           </Link>
         )}
       </div>
+
+      <ChlopiSourceSheet open={showSource} onClose={closeSource} />
     </main>
   );
 }
@@ -569,7 +601,7 @@ function FinalStep({
       <ReadAloudButton
         text={assembled || "Brak tekstu — wróć do kroku Pisz."}
         lang="pl"
-        idleLabel="Czytaj"
+        idleLabel="Na głos"
         className="btn-read w-full"
       />
       <article className="card text-[1.05rem] leading-relaxed whitespace-pre-wrap">
@@ -605,6 +637,25 @@ function HintBox({ label, text }: { label: string; text: string }) {
       <p className="text-xs uppercase tracking-wide text-white/45">{label}</p>
       <p className="mt-1 text-white/85">{text}</p>
     </aside>
+  );
+}
+
+function BookIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="20"
+      height="20"
+      aria-hidden="true"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5z" />
+      <path d="M4 5.5v16A2.5 2.5 0 0 1 6.5 19H20" />
+    </svg>
   );
 }
 
