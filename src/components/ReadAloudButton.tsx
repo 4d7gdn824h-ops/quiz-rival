@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   cancelSpeech,
   speakText,
@@ -16,36 +16,44 @@ type Props = {
   className?: string;
 };
 
+function subscribeNever() {
+  return () => {};
+}
+
 export function ReadAloudButton({ text, lang, idleLabel, className }: Props) {
-  const [supported, setSupported] = useState<boolean | null>(null);
-  const [speaking, setSpeaking] = useState(false);
+  const mounted = useSyncExternalStore(subscribeNever, () => true, () => false);
+  const [session, setSession] = useState({ text, lang, speaking: false });
   const generation = useRef(0);
 
+  if (session.text !== text || session.lang !== lang) {
+    setSession({ text, lang, speaking: false });
+  }
+
   useEffect(() => {
-    setSupported(speechSupported());
+    if (!speechSupported()) return;
+    const synth = window.speechSynthesis;
     const loadVoices = () => {
-      if (speechSupported()) window.speechSynthesis.getVoices();
+      synth.getVoices();
     };
     loadVoices();
-    window.speechSynthesis?.addEventListener?.("voiceschanged", loadVoices);
-    return () => {
-      window.speechSynthesis?.removeEventListener?.("voiceschanged", loadVoices);
-      generation.current += 1;
-      cancelSpeech();
-    };
+    synth.addEventListener("voiceschanged", loadVoices);
+    return () => synth.removeEventListener("voiceschanged", loadVoices);
   }, []);
 
   useEffect(() => {
-    generation.current += 1;
-    cancelSpeech();
-    setSpeaking(false);
-  }, [text, lang]);
+    return () => {
+      generation.current += 1;
+      cancelSpeech();
+    };
+  }, [lang, text]);
+
+  const speaking = session.speaking;
 
   const stop = useCallback(() => {
     generation.current += 1;
     cancelSpeech();
-    setSpeaking(false);
-  }, []);
+    setSession({ text, lang, speaking: false });
+  }, [lang, text]);
 
   const toggle = useCallback(() => {
     if (speaking) {
@@ -56,13 +64,13 @@ export function ReadAloudButton({ text, lang, idleLabel, className }: Props) {
     generation.current = myGen;
     const started = speakText(text, lang, {
       onend: () => {
-        if (generation.current === myGen) setSpeaking(false);
+        if (generation.current === myGen) setSession({ text, lang, speaking: false });
       },
       onerror: () => {
-        if (generation.current === myGen) setSpeaking(false);
+        if (generation.current === myGen) setSession({ text, lang, speaking: false });
       },
     });
-    setSpeaking(started);
+    setSession({ text, lang, speaking: started });
   }, [lang, speaking, stop, text]);
 
   const label = idleLabel ?? (lang === "en" ? "Read" : "Czytaj");
@@ -71,11 +79,11 @@ export function ReadAloudButton({ text, lang, idleLabel, className }: Props) {
       ? "Reading not supported on this browser"
       : "Czytanie nieobsługiwane w tej przeglądarce";
 
-  if (supported === null) {
+  if (!mounted) {
     return <div className="min-h-12" aria-hidden="true" />;
   }
 
-  if (!supported) {
+  if (!speechSupported()) {
     return <p className="text-sm text-white/50">{unsupported}</p>;
   }
 
