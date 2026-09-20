@@ -1,0 +1,139 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0c1022;
+  --foreground: #f4efe6;
+  --card: rgba(255, 255, 255, 0.06);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-nunito);
+  --font-display: var(--font-bricolage);
+}
+
+html {
+  background: var(--background);
+}
+
+body {
+  min-height: 100dvh;
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(255, 90, 54, 0.22), transparent 55%),
+    radial-gradient(900px 500px at 110% 10%, rgba(76, 201, 240, 0.18), transparent 50%),
+    var(--background);
+}
+
+.font-display {
+  font-family: var(--font-display), var(--font-sans), system-ui, sans-serif;
+}
+
+.card {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--card);
+  border-radius: 1.5rem;
+  padding: 1.25rem;
+  backdrop-filter: blur(12px);
+}
+
+.field {
+  width: 100%;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.25);
+  padding: 0.9rem 1rem;
+  color: white;
+  outline: none;
+}
+
+.field:focus {
+  box-shadow: 0 0 0 3px rgba(190, 255, 120, 0.35);
+  border-color: #beff78;
+}
+
+.btn-primary,
+.btn-secondary,
+.answer {
+  width: 100%;
+  min-height: 3.5rem;
+  border-radius: 1.15rem;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.btn-primary {
+  background: #beff78;
+  color: #10200a;
+}
+
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.answer:disabled {
+  opacity: 0.6;
+}
+
+.btn-secondary {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+}
+
+.choice {
+  display: block;
+  border-radius: 1.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.18);
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+}
+
+.choice-on {
+  border-color: #beff78;
+  box-shadow: inset 0 0 0 1px #beff78;
+  background: rgba(190, 255, 120, 0.08);
+}
+
+.answer {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.07);
+  color: white;
+  padding: 0.95rem 1rem;
+  text-align: left;
+}
+
+.answer-on {
+  border-color: #beff78;
+  background: rgba(190, 255, 120, 0.12);
+}
+
+textarea.field {
+  min-height: 6.5rem;
+  resize: vertical;
+  line-height: 1.45;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid #beff78;
+  outline-offset: 2px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

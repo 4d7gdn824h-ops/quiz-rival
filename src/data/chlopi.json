@@ -1,0 +1,278 @@
+{
+  "id": "chlopi",
+  "title": "Chłopi (Klasa 8)",
+  "language": "pl",
+  "source": "zadanie Pani Moniki + karta pracy · termin 26 września 2026",
+  "variants": {
+    "A": [
+      {
+        "id": "chlopi-a-q1",
+        "prompt": "Autorem powieści Chłopi jest:",
+        "options": [
+          { "id": "A", "text": "Henryk Sienkiewicz" },
+          { "id": "B", "text": "Władysław Reymont" },
+          { "id": "C", "text": "Bolesław Prus" },
+          { "id": "D", "text": "Stefan Żeromski" }
+        ],
+        "correctOptionId": "B",
+        "parentHint": "Correct author is Reymont (Nobel)."
+      },
+      {
+        "id": "chlopi-a-q2",
+        "prompt": "Akcja Chłopów toczy się głównie we wsi:",
+        "options": [
+          { "id": "A", "text": "Lipce" },
+          { "id": "B", "text": "Soplicowo" },
+          { "id": "C", "text": "Wokulkowo" },
+          { "id": "D", "text": "Pacanów" }
+        ],
+        "correctOptionId": "A",
+        "parentHint": "Village = Lipce."
+      },
+      {
+        "id": "chlopi-a-q3",
+        "prompt": "Które dwa fakty najlepiej świadczą o bogactwie i znaczeniu Macieja Boryny w Lipcach?",
+        "options": [
+          {
+            "id": "A",
+            "text": "Duże gospodarstwo / ziemia oraz autorytet i zamożność we wsi"
+          },
+          {
+            "id": "B",
+            "text": "Był nauczycielem i organistą, więc wszyscy go słuchali"
+          },
+          {
+            "id": "C",
+            "text": "Odziedziczył pałac po szlachcie z Warszawy"
+          },
+          {
+            "id": "D",
+            "text": "Handlował tylko z Ameryką i nie mieszkał we wsi"
+          }
+        ],
+        "correctOptionId": "A",
+        "parentHint": "Look for land, wealth, status in the village."
+      },
+      {
+        "id": "chlopi-a-q4",
+        "prompt": "Podaj dwie główne przyczyny konfliktu między Boryną a synem Antkiem.",
+        "options": [
+          {
+            "id": "A",
+            "text": "Spór o ziemię i dziedziczenie, władza ojca oraz sprawy związane z Jagną"
+          },
+          {
+            "id": "B",
+            "text": "Antek chce zostać księdzem, a Boryna mu zabrania"
+          },
+          {
+            "id": "C",
+            "text": "Kłócą się o to, kto ma iść do szkoły w mieście"
+          },
+          {
+            "id": "D",
+            "text": "Antek wyjechał na wojnę i ojciec nie chce go wpuścić do domu"
+          }
+        ],
+        "correctOptionId": "A",
+        "parentHint": "Father–son fight: land/inheritance, authority, often tied to Jagna / family honor."
+      },
+      {
+        "id": "chlopi-a-q5",
+        "prompt": "Jagna w powieści jest postacią kojarzoną m.in. z:",
+        "options": [
+          { "id": "A", "text": "tylko spokojnym życiem gospodyni" },
+          { "id": "B", "text": "presją społeczną i oceną społeczności" },
+          { "id": "C", "text": "rolą nauczyciela we wsi" },
+          { "id": "D", "text": "emigracją do Ameryki" }
+        ],
+        "correctOptionId": "B",
+        "parentHint": "Jagna ↔ social pressure."
+      },
+      {
+        "id": "chlopi-a-q6",
+        "prompt": "Prawda czy fałsz: konflikty pokoleniowe o majątek nie pojawiają się w Chłopach.",
+        "options": [
+          { "id": "A", "text": "Prawda" },
+          { "id": "B", "text": "Fałsz" }
+        ],
+        "correctOptionId": "B",
+        "parentHint": "Generational property conflict IS in the book → False (Fałsz)."
+      },
+      {
+        "id": "chlopi-a-q7",
+        "prompt": "Motyw „wykluczenia odmieńców” w kontekście Chłopów oznacza głównie:",
+        "options": [
+          { "id": "A", "text": "karę za złe oceny w szkole" },
+          {
+            "id": "B",
+            "text": "odrzucenie osób, które nie mieszczą się w normach wsi"
+          },
+          { "id": "C", "text": "zakaz handlu na jarmarku" },
+          { "id": "D", "text": "obowiązek służby wojskowej" }
+        ],
+        "correctOptionId": "B",
+        "parentHint": "“Outsiders” rejected by village norms."
+      },
+      {
+        "id": "chlopi-a-q8",
+        "prompt": "Który współczesny przykład najlepiej pokazuje, że problematyka Chłopów (presja społeczna, wykluczenie, konflikt o majątek) jest nadal aktualna?",
+        "options": [
+          {
+            "id": "A",
+            "text": "Presja rówieśnicza w internecie, wykluczanie „innych” albo rodzinne spory o spadek"
+          },
+          {
+            "id": "B",
+            "text": "Budowa piramid egipskich jako wzór gospodarki wiejskiej"
+          },
+          {
+            "id": "C",
+            "text": "Żegluga wikingów bez związku z presją społeczną"
+          },
+          {
+            "id": "D",
+            "text": "Alchemia i poszukiwanie kamienia filozoficznego"
+          }
+        ],
+        "correctOptionId": "A",
+        "parentHint": "Any clear modern parallel: social-media peer pressure, inheritance fights, exclusion of minorities, etc."
+      }
+    ],
+    "B": [
+      {
+        "id": "chlopi-b-q1",
+        "prompt": "Chłopów napisał:",
+        "options": [
+          { "id": "A", "text": "Adam Mickiewicz" },
+          { "id": "B", "text": "Władysław Stanisław Reymont" },
+          { "id": "C", "text": "Eliza Orzeszkowa" },
+          { "id": "D", "text": "Juliusz Słowacki" }
+        ],
+        "correctOptionId": "B",
+        "parentHint": "Same as A: Reymont wrote Chłopi."
+      },
+      {
+        "id": "chlopi-b-q2",
+        "prompt": "Lipce to w powieści:",
+        "options": [
+          { "id": "A", "text": "miasto fabryczne" },
+          { "id": "B", "text": "wieś, główne miejsce akcji" },
+          { "id": "C", "text": "dwór szlachecki poza Polską" },
+          { "id": "D", "text": "szkoła w Warszawie" }
+        ],
+        "correctOptionId": "B",
+        "parentHint": "Lipce is the village — the main setting."
+      },
+      {
+        "id": "chlopi-b-q3",
+        "prompt": "Wskaż dwa dowody, że Maciej Boryna należy do ważniejszych i zamożniejszych gospodarzy.",
+        "options": [
+          {
+            "id": "A",
+            "text": "Ziemia, status, autorytet i zamożność względem innych chłopów"
+          },
+          {
+            "id": "B",
+            "text": "Prowadzi szkołę parafialną i uczy dzieci czytać"
+          },
+          {
+            "id": "C",
+            "text": "Jest jedynym kowalem w okolicy, bez własnego pola"
+          },
+          {
+            "id": "D",
+            "text": "Mieszka w dworze szlacheckim poza Lipcami"
+          }
+        ],
+        "correctOptionId": "A",
+        "parentHint": "Same as A — land, status, authority, wealth."
+      },
+      {
+        "id": "chlopi-b-q4",
+        "prompt": "Dlaczego Antek kłóci się z ojcem? Wskaż minimum dwie przyczyny.",
+        "options": [
+          {
+            "id": "A",
+            "text": "Majątek i dziedziczenie, władza ojca, Jagna / sprawy rodzinne"
+          },
+          {
+            "id": "B",
+            "text": "Antek chce sprzedać wieś i wyjechać do Francji"
+          },
+          {
+            "id": "C",
+            "text": "Ojciec zabrania mu iść na jarmark w niedzielę"
+          },
+          {
+            "id": "D",
+            "text": "Spór o to, kto ma zostać organistą w kościele"
+          }
+        ],
+        "correctOptionId": "A",
+        "parentHint": "Same as A — property, father's authority, Jagna / family matters."
+      },
+      {
+        "id": "chlopi-b-q5",
+        "prompt": "Społeczność wsi wobec Jagny najczęściej:",
+        "options": [
+          { "id": "A", "text": "całkowicie ją ignoruje" },
+          { "id": "B", "text": "ocenia, plotkuje, wywiera presję" },
+          { "id": "C", "text": "wybiera ją na sołtysa" },
+          { "id": "D", "text": "wysyła ją na studia" }
+        ],
+        "correctOptionId": "B",
+        "parentHint": "The village judges, gossips, and pressures Jagna."
+      },
+      {
+        "id": "chlopi-b-q6",
+        "prompt": "Prawda czy fałsz: w Chłopach pojawia się temat konfliktu pokoleń związany z majątkiem.",
+        "options": [
+          { "id": "A", "text": "Prawda" },
+          { "id": "B", "text": "Fałsz" }
+        ],
+        "correctOptionId": "A",
+        "parentHint": "Here Q6 is True (Prawda): property conflict across generations is in the book."
+      },
+      {
+        "id": "chlopi-b-q7",
+        "prompt": "„Wykluczenie odmieńców” najbliższe jest sytuacji, gdy:",
+        "options": [
+          { "id": "A", "text": "ktoś dostaje nagrodę szkolną" },
+          {
+            "id": "B",
+            "text": "społeczność odrzuca osobę łamiącą lokalne normy"
+          },
+          { "id": "C", "text": "bohater kupuje nowego konia" },
+          { "id": "D", "text": "rozpoczynają się żniwa" }
+        ],
+        "correctOptionId": "B",
+        "parentHint": "Community rejects someone who breaks local norms."
+      },
+      {
+        "id": "chlopi-b-q8",
+        "prompt": "Czy problemy z Chłopów są aktualne? Który przykład + uzasadnienie pasuje najlepiej?",
+        "options": [
+          {
+            "id": "A",
+            "text": "Tak — np. hejt w sieci, wykluczenie mniejszości albo rodzinne konflikty spadkowe"
+          },
+          {
+            "id": "B",
+            "text": "Nie — te problemy skończyły się wraz z XIX wiekiem"
+          },
+          {
+            "id": "C",
+            "text": "Aktualne są tylko tematy żniw i pogody"
+          },
+          {
+            "id": "D",
+            "text": "Aktualne wyłącznie w starożytnym Rzymie"
+          }
+        ],
+        "correctOptionId": "A",
+        "parentHint": "Same as A — a concrete modern example plus a short why."
+      }
+    ]
+  }
+}
