@@ -89,7 +89,7 @@ export function Scoreboard({
             }
           >
             <p className="rivalry-tag" style={{ color }}>
-              {tags.join(" · ") || (index === 0 ? "P1" : "P2")}
+              {tags.join(" · ") || "Rival"}
             </p>
             <p className="rivalry-name" title={player.name}>
               {player.name}

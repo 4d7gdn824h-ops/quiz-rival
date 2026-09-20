@@ -216,6 +216,20 @@ textarea:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 
+.rivalry-flash .rivalry-score {
+  animation: rivalry-score-punch 1.05s ease-out;
+}
+
+@keyframes rivalry-score-punch {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  18% {
+    transform: scale(1.12);
+  }
+}
+
 .rivalry-status {
   margin-top: 0.3rem;
   font-size: 0.7rem;
@@ -257,12 +271,12 @@ textarea:focus-visible {
     transform: scale(1);
     box-shadow: 0 0 0 0 color-mix(in srgb, var(--flash) 0%, transparent);
   }
-  28% {
-    transform: scale(1.035);
-    background: color-mix(in srgb, var(--flash) 24%, rgba(255, 255, 255, 0.06));
+  18% {
+    transform: scale(1.05);
+    background: color-mix(in srgb, var(--flash) 42%, rgba(255, 255, 255, 0.06));
     box-shadow:
-      0 0 0 3px color-mix(in srgb, var(--flash) 65%, transparent),
-      0 0 26px color-mix(in srgb, var(--flash) 40%, transparent);
+      0 0 0 4px color-mix(in srgb, var(--flash) 85%, transparent),
+      0 0 36px color-mix(in srgb, var(--flash) 60%, transparent);
   }
   100% {
     transform: scale(1);
@@ -271,8 +285,12 @@ textarea:focus-visible {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .rivalry-flash {
+  .rivalry-flash,
+  .rivalry-flash .rivalry-score {
     animation: none;
-    background: color-mix(in srgb, var(--flash) 20%, rgba(255, 255, 255, 0.06));
+  }
+
+  .rivalry-flash {
+    background: color-mix(in srgb, var(--flash) 28%, rgba(255, 255, 255, 0.06));
   }
 }
