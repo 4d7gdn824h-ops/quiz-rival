@@ -13,7 +13,7 @@ import { readSession, writeSession } from "@/lib/client/session";
 import { questionSpeechText, type SpeechLocale } from "@/lib/client/speech";
 import type { RoomSnapshot } from "@/lib/game/types";
 import { ReadAloudButton } from "./ReadAloudButton";
-import { Scoreboard } from "./Scoreboard";
+import { Scoreboard, seatYouVsThem } from "./Scoreboard";
 import { TimerBar } from "./TimerBar";
 import { TinyPath } from "./TinyPath";
 
@@ -357,6 +357,7 @@ export function RoomClient({ code }: { code: string }) {
       {snapshot.room.status === "finished" ? (
         <WinnerPanel
           snapshot={snapshot}
+          youId={playerId}
           isHost={isHost}
           busy={busy}
           completedIds={completedIds}
@@ -374,6 +375,7 @@ export function RoomClient({ code }: { code: string }) {
 
 function WinnerPanel({
   snapshot,
+  youId,
   isHost,
   busy,
   completedIds,
@@ -381,34 +383,67 @@ function WinnerPanel({
   onSelectLevel,
 }: {
   snapshot: RoomSnapshot;
+  youId: string | null;
   isHost: boolean;
   busy: boolean;
   completedIds: readonly string[];
   onRematch: () => void;
   onSelectLevel?: (levelId: string) => void;
 }) {
-  const winners = snapshot.players.filter((p) => snapshot.winnerIds.includes(p.id));
-  const tie = winners.length > 1;
+  const { you, them } = seatYouVsThem(snapshot.players, youId ?? undefined);
+  const youWonSole =
+    Boolean(you && snapshot.winnerIds.length === 1 && snapshot.winnerIds[0] === you.id);
+  const theyWonSole =
+    Boolean(them && snapshot.winnerIds.length === 1 && snapshot.winnerIds[0] === them.id);
+  const outcome = youWonSole ? "you" : theyWonSole ? "them" : "tie";
+  const headline =
+    outcome === "you" ? "YOU WON" : outcome === "them" ? "THEY WON" : "IT'S A TIE";
+  const youScore = you?.score ?? 0;
+  const themScore = them?.score ?? 0;
+  const gap = youScore - themScore;
+  const gapText = gap > 0 ? `+${gap}` : gap === 0 ? "0" : `−${Math.abs(gap)}`;
+  const gapCaption =
+    gap > 0 ? "points ahead" : gap < 0 ? "points behind" : "score gap";
+  const gapSpoken =
+    gap === 0
+      ? `Tied ${youScore} to ${themScore}`
+      : gap > 0
+        ? `You won by ${gap}, ${youScore} to ${themScore}`
+        : `They won by ${Math.abs(gap)}, ${themScore} to ${youScore}`;
+
   return (
-    <section className="card space-y-4 text-center">
-      <p className="text-xs uppercase tracking-[0.3em] text-[#ffd166]">Final</p>
-      <h2 className="font-display text-4xl">
-        {tie ? "It's a tie!" : `${winners[0]?.name ?? "Winner"} wins`}
+    <section className="card winner-card space-y-5 text-center">
+      <p className="winner-kicker">Final</p>
+      <h2 className={`winner-headline is-${outcome}`} data-winner={outcome}>
+        {headline}
       </h2>
-      <ul className="space-y-2 text-left">
-        {snapshot.players
-          .slice()
-          .sort((a, b) => b.score - a.score)
-          .map((player) => (
-            <li
-              key={player.id}
-              className="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2"
-            >
-              <span>{player.name}</span>
-              <span className="font-display text-2xl">{player.score}</span>
-            </li>
-          ))}
-      </ul>
+      <div className="winner-gap-block" aria-label={gapSpoken}>
+        <p className={`winner-gap is-${outcome}`} data-score-gap={String(gap)}>
+          {gapText}
+        </p>
+        <p className="winner-gap-caption">{gapCaption}</p>
+      </div>
+      <div className="winner-scoreline" aria-hidden="true">
+        <div className="winner-score-side">
+          <p className="winner-score-tag is-you">You</p>
+          <p className="winner-score is-you">{youScore}</p>
+          <p className="winner-score-name">{you?.name ?? "You"}</p>
+        </div>
+        <p className="winner-score-dash">–</p>
+        <div className="winner-score-side">
+          <p className="winner-score-tag is-them">Them</p>
+          <p className="winner-score is-them">{themScore}</p>
+          <p className="winner-score-name">{them?.name ?? "Waiting"}</p>
+        </div>
+      </div>
+      {isHost ? (
+        <button className="btn-rematch" onClick={onRematch} disabled={busy} data-cta="rematch">
+          <span className="btn-rematch-label">{busy ? "Resetting…" : "Rematch"}</span>
+          <span className="btn-rematch-meta">Switch A↔B + shuffle</span>
+        </button>
+      ) : (
+        <p className="winner-wait">Host can tap Rematch for another round.</p>
+      )}
       {snapshot.levels.filter((level) => !level.mega).length ? (
         <div className="space-y-2 text-left">
           <TinyPath
@@ -423,13 +458,6 @@ function WinnerPanel({
           </p>
         </div>
       ) : null}
-      {isHost ? (
-        <button className="btn-primary" onClick={onRematch} disabled={busy}>
-          {busy ? "Resetting…" : "Rematch (switch A↔B + shuffle)"}
-        </button>
-      ) : (
-        <p className="text-white/60">Host can tap Rematch for another round.</p>
-      )}
       {isHost ? (
         <Link
           className="block text-sm text-white/55 underline underline-offset-4"

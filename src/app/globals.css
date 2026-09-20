@@ -82,8 +82,167 @@ body {
 
 .btn-primary:disabled,
 .btn-secondary:disabled,
+.btn-rematch:disabled,
 .answer:disabled {
   opacity: 0.6;
+}
+
+.btn-rematch {
+  display: flex;
+  width: 100%;
+  min-height: 6.25rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  border-radius: 1.35rem;
+  background: #beff78;
+  color: #10200a;
+  box-shadow:
+    0 0 0 4px rgba(190, 255, 120, 0.22),
+    0 16px 36px rgba(0, 0, 0, 0.28);
+}
+
+.btn-rematch-label {
+  font-family: var(--font-display), var(--font-sans), system-ui, sans-serif;
+  font-size: 2.35rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.btn-rematch-meta {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #1f3d12;
+}
+
+.winner-card {
+  padding-top: 1.45rem;
+  padding-bottom: 1.45rem;
+}
+
+.winner-kicker {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: #ffd166;
+}
+
+.winner-headline {
+  font-family: var(--font-display), var(--font-sans), system-ui, sans-serif;
+  font-size: clamp(2.85rem, 15vw, 4.35rem);
+  font-weight: 800;
+  line-height: 0.88;
+  letter-spacing: -0.04em;
+}
+
+.winner-headline.is-you {
+  color: #beff78;
+}
+
+.winner-headline.is-them {
+  color: #4cc9f0;
+}
+
+.winner-headline.is-tie {
+  color: #ffd166;
+}
+
+.winner-gap-block {
+  display: grid;
+  justify-items: center;
+  gap: 0.2rem;
+}
+
+.winner-gap {
+  font-family: var(--font-display), var(--font-sans), system-ui, sans-serif;
+  font-size: clamp(4.4rem, 24vw, 6.75rem);
+  font-weight: 800;
+  line-height: 0.82;
+  letter-spacing: -0.05em;
+  font-variant-numeric: tabular-nums;
+}
+
+.winner-gap.is-you {
+  color: #beff78;
+}
+
+.winner-gap.is-them {
+  color: #4cc9f0;
+}
+
+.winner-gap.is-tie {
+  color: #f4efe6;
+}
+
+.winner-gap-caption {
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.winner-scoreline {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: end;
+  gap: 0.4rem;
+}
+
+.winner-score-side {
+  min-width: 0;
+}
+
+.winner-score-tag {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.winner-score-tag.is-you,
+.winner-score.is-you {
+  color: #ff6b6b;
+}
+
+.winner-score-tag.is-them,
+.winner-score.is-them {
+  color: #4cc9f0;
+}
+
+.winner-score {
+  font-family: var(--font-display), var(--font-sans), system-ui, sans-serif;
+  font-size: clamp(2.4rem, 12vw, 3.25rem);
+  font-weight: 800;
+  line-height: 0.95;
+  font-variant-numeric: tabular-nums;
+}
+
+.winner-score-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.winner-score-dash {
+  padding-bottom: 1.55rem;
+  font-family: var(--font-display), var(--font-sans), system-ui, sans-serif;
+  font-size: 2rem;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.winner-wait {
+  border-radius: 1.15rem;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0.85rem 1rem;
+  color: rgba(255, 255, 255, 0.62);
 }
 
 .btn-secondary {
