@@ -24,6 +24,7 @@ import {
   type WritingDraft,
 } from "@/lib/client/writing-draft";
 import { countWords, joinEssay } from "@/lib/writing/words";
+import { ReadAloudButton } from "./ReadAloudButton";
 
 export function WriteCoach() {
   const [draft, setDraft] = useState<WritingDraft>(EMPTY_DRAFT);
@@ -56,6 +57,10 @@ export function WriteCoach() {
   const assembled = useMemo(
     () => joinEssay([draft.thesis, draft.themeLinks, draft.modernPara, draft.closing]),
     [draft.closing, draft.modernPara, draft.themeLinks, draft.thesis],
+  );
+  const spokenText = useMemo(
+    () => speechForStep(draft, assembled, hintStep),
+    [assembled, draft, hintStep],
   );
   const words = countWords(assembled);
   const step = draft.step;
@@ -173,6 +178,10 @@ export function WriteCoach() {
         />
       ) : null}
 
+      {step < 5 ? (
+        <ReadAloudButton text={spokenText} lang="pl" idleLabel="Czytaj" className="btn-read w-full" />
+      ) : null}
+
       {error ? (
         <p className="rounded-2xl bg-orange-400/15 px-4 py-3 text-sm text-orange-100" role="alert">
           {error}
@@ -215,6 +224,78 @@ export function WriteCoach() {
 
 function hintId(step: number) {
   return STEPS[step]?.id ?? null;
+}
+
+/** Spoken copy for the current step: visible prompt, revealed tips, or the final essay. */
+function speechForStep(draft: WritingDraft, assembled: string, hintStep: string | null): string {
+  const showHint = hintStep === hintId(draft.step);
+  const parts: string[] = [];
+
+  switch (draft.step) {
+    case 0:
+      parts.push("Pytanie problemowe.");
+      parts.push(ESSAY_PROMPT);
+      parts.push(
+        `Cel: około 100 słów (${TARGET_WORDS_MIN}–${TARGET_WORDS_MAX}). Jedna jasna teza plus jeden przykład z dzisiaj.`,
+      );
+      break;
+    case 1:
+      parts.push("Czy to nadal aktualne?");
+      for (const item of STANCES) {
+        parts.push(`${item.label}. ${item.tip}`);
+      }
+      if (showHint && draft.stance) {
+        const hint = STANCES.find((item) => item.id === draft.stance)?.thesisHint;
+        if (hint) parts.push("Szkic tezy (przerób swoimi słowami).", hint);
+      } else if (showHint) {
+        parts.push("Najpierw wybierz Tak, Nie albo Częściowo.");
+      }
+      break;
+    case 2:
+      parts.push("Wątki z lektury.");
+      parts.push("Zaznacz 1–3. Potem powiążesz je z dzisiejszym przykładem.");
+      for (const theme of THEMES) {
+        parts.push(`${theme.label}. ${theme.hint}`);
+      }
+      if (showHint) {
+        const id = draft.themes[0] ?? "presja";
+        parts.push("Jedno zdanie do przerobienia.", THEME_SENTENCES[id]);
+      }
+      break;
+    case 3:
+      parts.push("Twój przykład ze współczesności.");
+      parts.push("Napisz sama. Nie wklejamy tu gotowego akapitu.");
+      parts.push("Co dzieje się dzisiaj?");
+      if (showHint) {
+        parts.push("Przykładowe zdanie — zmień konkret (kto? gdzie?).", EXAMPLE_HINT);
+      }
+      break;
+    case 4: {
+      parts.push("Składaj po zdaniach.");
+      parts.push("Cztery krótkie pola. Na końcu złożą się w jedną wypowiedź.");
+      if (draft.example) {
+        parts.push(
+          "Przykład z poprzedniego kroku możesz rozwinąć w polu 3 — nic nie wstawiamy za Ciebie.",
+        );
+      }
+      if (showHint) {
+        const stanceHint =
+          STANCES.find((item) => item.id === draft.stance)?.thesisHint ?? STANCES[0].thesisHint;
+        parts.push("Szkic tezy.", stanceHint);
+        const themeHint = draft.themes.map((id) => THEME_SENTENCES[id]).join(" ");
+        if (themeHint) parts.push("Szkic wątku.", themeHint);
+        parts.push("Szkic zakończenia.", CLOSING_HINT);
+      }
+      break;
+    }
+    case 5:
+      parts.push(assembled || "Brak tekstu — wróć do kroku Pisz.");
+      break;
+    default:
+      break;
+  }
+
+  return parts.join(" ");
 }
 
 function validate(draft: WritingDraft): string | null {
@@ -485,6 +566,12 @@ function FinalStep({
             ? "Trochę krótko — wróć i dopisz przykład albo zakończenie."
             : "Trochę długo — skróć powtórzenia. Na kartę wystarczy ok. 100 słów."}
       </p>
+      <ReadAloudButton
+        text={assembled || "Brak tekstu — wróć do kroku Pisz."}
+        lang="pl"
+        idleLabel="Czytaj"
+        className="btn-read w-full"
+      />
       <article className="card text-[1.05rem] leading-relaxed whitespace-pre-wrap">
         {assembled || "Brak tekstu — wróć do kroku Pisz."}
       </article>
