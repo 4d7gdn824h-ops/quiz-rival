@@ -7,3 +7,5 @@ export const POLL_MS = 450;
 export const ROOM_TTL_MS = 6 * 60 * 60 * 1000;
 export const SESSION_STORAGE_KEY = "quizrival-session";
 export const ALL_ANSWERED_HOLD_MS = 1200;
+/** Rooms play the 8-question mega-level until the Duolingo path UI lands. */
+export const DEFAULT_PLAYLIST_ID = "full" as const;

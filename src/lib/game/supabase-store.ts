@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { QuizVariant } from "@/data/types";
+import type { PlaylistId, QuizVariant } from "@/data/types";
+import { DEFAULT_PLAYLIST_ID } from "@/lib/constants";
 import { createInitialState } from "./engine";
 import { notifyRoom } from "./pubsub";
 import type { Answer, GameStore, Player, Room, RoomState } from "./types";
@@ -13,6 +14,7 @@ interface RoomRow {
   current_question_index: number;
   question_ends_at: string | null;
   question_order: number[];
+  playlist_id?: PlaylistId | null;
   created_at: string;
 }
 
@@ -43,6 +45,7 @@ function toRoom(row: RoomRow): Room {
       ? new Date(row.question_ends_at).getTime()
       : null,
     questionOrder: row.question_order ?? [],
+    playlistId: row.playlist_id === "tiny" ? "tiny" : DEFAULT_PLAYLIST_ID,
     createdAt: new Date(row.created_at).getTime(),
   };
 }
@@ -158,6 +161,7 @@ function toRoomRow(room: Room) {
       ? new Date(room.questionEndsAt).toISOString()
       : null,
     question_order: room.questionOrder,
+    playlist_id: room.playlistId ?? DEFAULT_PLAYLIST_ID,
     created_at: new Date(room.createdAt).toISOString(),
   };
 }

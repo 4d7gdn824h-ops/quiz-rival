@@ -1,4 +1,4 @@
-import type { PublicQuestion, QuizVariant } from "@/data/types";
+import type { PlaylistId, PublicLevel, PublicQuestion, QuizVariant } from "@/data/types";
 
 export type RoomStatus = "lobby" | "playing" | "finished";
 
@@ -11,6 +11,7 @@ export interface Room {
   currentQuestionIndex: number;
   questionEndsAt: number | null;
   questionOrder: number[];
+  playlistId: PlaylistId;
   createdAt: number;
 }
 
@@ -56,7 +57,10 @@ export interface RoomSnapshot {
     questionEndsAt: number | null;
     questionCount: number;
     questionSeconds: number;
+    playlistId: PlaylistId;
+    currentLevelId: string | null;
   };
+  levels: PublicLevel[];
   players: PublicPlayer[];
   currentQuestion: PublicQuestion | null;
   yourAnswer: string | null;
@@ -69,6 +73,7 @@ export interface GameStore {
     hostName: string;
     quizId: string;
     variant: QuizVariant;
+    playlistId?: PlaylistId;
   }): Promise<{ state: RoomState; player: Player }>;
   getState(code: string): Promise<RoomState | null>;
   saveState(state: RoomState): Promise<void>;

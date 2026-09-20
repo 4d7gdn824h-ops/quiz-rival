@@ -151,6 +151,9 @@ export function HomeClient() {
         </button>
         <p className="text-xs text-white/45">
           {selected?.title} · {selected?.questionCount} questions · 25s each
+          {selected?.levelCount
+            ? ` · ${selected.levelCount} tiny levels mapped (path UI later)`
+            : ""}
         </p>
       </form>
 

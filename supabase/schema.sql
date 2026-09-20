@@ -10,8 +10,11 @@ create table if not exists rooms (
   current_question_index int not null default 0,
   question_ends_at timestamptz,
   question_order int[] not null default '{}',
+  playlist_id text not null default 'full',
   created_at timestamptz not null default now()
 );
+
+alter table rooms add column if not exists playlist_id text not null default 'full';
 
 create table if not exists players (
   id text primary key,

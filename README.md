@@ -64,6 +64,18 @@ npm run build   # production build
 npm start       # serve the build
 ```
 
+## Next: tiny levels (Duolingo-style)
+
+Marcin confirmed a **tiny levels** pattern (one theme, short round, clear win). Screenshot references are still incoming — we will restructure pack content + UI around levels when they arrive, not bolt a skill tree on later.
+
+**Already in the code (seams only):**
+
+- `Level` in `src/data/types.ts`: `{ id, packId, title, theme, questionIds, passRule }`
+- `src/data/levels.ts` slices **Chłopi** into themed micro-rounds (lektura / Jagna / wykluczenie / Boryna–Antek / teza) and **Warm-up (EN)** into places / science / school bits. Variant B is the rematch path (same level ids, B wording).
+- Rooms play a **playlist**: default `"full"` is one temporary mega-level (today’s 8-question race, unchanged). Flip `DEFAULT_PLAYLIST_ID` (or a room `playlistId`) to `"tiny"` to race a linear playlist of those levels — same realtime, no new matchmaking.
+- Pass rules: complete the round, or `minCorrect`. Evaluated in `src/lib/levels/resolve.ts`.
+- Home/lobby show a light “levels mapped” line only. **No** skill tree, streaks, hearts, or cosmetics until the screenshots land.
+
 ## Out of scope (intentionally)
 
-Auth, Stripe, file upload / vision, PDF print, voice TTS/STT, Google OAuth, XP shop, stranger matchmaking, chat.
+Auth, Stripe, file upload / vision, PDF print, voice TTS/STT, Google OAuth, XP shop, stranger matchmaking, chat, streaks, hearts, skill-tree cosmetics.

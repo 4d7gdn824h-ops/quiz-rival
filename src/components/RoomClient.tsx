@@ -163,6 +163,9 @@ export function RoomClient({ code }: { code: string }) {
   const you = snapshot?.players.find((p) => p.id === playerId);
   const isHost = you?.isHost ?? false;
   const spacedCode = useMemo(() => code.split("").join(" "), [code]);
+  const currentLevelTitle = snapshot?.levels.find(
+    (level) => level.id === snapshot.room.currentLevelId && !level.mega,
+  )?.title;
 
   if (!ready) {
     return (
@@ -243,6 +246,16 @@ export function RoomClient({ code }: { code: string }) {
               ? "Share the code. Wait for your sibling, then start."
               : "Both here. Host can start the 25s race."}
           </p>
+          {snapshot.levels.length > 0 ? (
+            <p className="text-xs text-white/45">
+              Tonight: {snapshot.room.playlistId === "tiny" ? "tiny-level playlist" : "full pack"}
+              {" · "}
+              {snapshot.levels
+                .filter((level) => !level.mega)
+                .map((level) => level.title)
+                .join(" · ") || snapshot.levels[0]?.title}
+            </p>
+          ) : null}
           {isHost ? (
             <button className="btn-primary" onClick={() => void onStart()} disabled={busy}>
               {busy ? "Starting…" : "Start"}
@@ -261,6 +274,7 @@ export function RoomClient({ code }: { code: string }) {
           <article className="card space-y-4">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lime-300">
               Question {snapshot.room.currentQuestionIndex + 1} / {snapshot.room.questionCount}
+              {currentLevelTitle ? ` · ${currentLevelTitle}` : ""}
             </p>
             <h2 className="font-display text-[1.65rem] leading-snug">
               {snapshot.currentQuestion.prompt}

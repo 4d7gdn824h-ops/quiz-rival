@@ -1,11 +1,12 @@
-import { getQuestions } from "@/data/quizzes";
-import type { QuizVariant } from "@/data/types";
+import type { PlaylistId, QuizVariant } from "@/data/types";
 import {
   ALL_ANSWERED_HOLD_MS,
   ANSWER_GRACE_MS,
+  DEFAULT_PLAYLIST_ID,
   MAX_PLAYERS,
   QUESTION_MS,
 } from "@/lib/constants";
+import { getPlayQuestions } from "@/lib/levels/resolve";
 import { identityOrder, randomId, randomRoomCode, shuffledOrder } from "@/lib/ids";
 import type { Answer, Player, Room, RoomState } from "./types";
 
@@ -17,9 +18,13 @@ export class GameError extends Error {
   }
 }
 
+function playQuestions(state: RoomState) {
+  return getPlayQuestions(state.room.quizId, state.room.variant, state.room.playlistId);
+}
+
 function currentQuestionId(state: RoomState): string | null {
-  const questions = getQuestions(state.room.quizId, state.room.variant);
-  if (!questions) return null;
+  const questions = playQuestions(state);
+  if (!questions.length) return null;
   const realIndex = state.room.questionOrder[state.room.currentQuestionIndex];
   return questions[realIndex]?.id ?? null;
 }
@@ -36,8 +41,10 @@ export function createInitialState(input: {
   hostName: string;
   quizId: string;
   variant: QuizVariant;
+  playlistId?: PlaylistId;
 }): { state: RoomState; player: Player } {
-  const questions = getQuestions(input.quizId, input.variant);
+  const playlistId = input.playlistId ?? DEFAULT_PLAYLIST_ID;
+  const questions = getPlayQuestions(input.quizId, input.variant, playlistId);
   if (!questions?.length) {
     throw new GameError("Unknown quiz pack", 404);
   }
@@ -57,6 +64,7 @@ export function createInitialState(input: {
     currentQuestionIndex: 0,
     questionEndsAt: null,
     questionOrder: identityOrder(questions.length),
+    playlistId,
     createdAt: Date.now(),
   };
   host.roomCode = room.code;
@@ -115,8 +123,8 @@ export function answerState(
   const player = state.players.find((p) => p.id === input.playerId);
   if (!player) throw new GameError("You are not in this room.", 403);
 
-  const questions = getQuestions(state.room.quizId, state.room.variant);
-  if (!questions) throw new GameError("Quiz missing.", 500);
+  const questions = playQuestions(state);
+  if (!questions.length) throw new GameError("Quiz missing.", 500);
   const realIndex = state.room.questionOrder[state.room.currentQuestionIndex];
   const question = questions[realIndex];
   if (!question || question.id !== input.questionId) {
@@ -176,7 +184,7 @@ export function rematchState(
   const next = cloneState(state);
   const nextVariant: QuizVariant =
     switchVariant && next.room.variant === "A" ? "B" : switchVariant ? "A" : next.room.variant;
-  const questions = getQuestions(next.room.quizId, nextVariant);
+  const questions = getPlayQuestions(next.room.quizId, nextVariant, next.room.playlistId);
   if (!questions?.length) throw new GameError("Quiz missing.", 500);
   next.room.variant = nextVariant;
   next.room.status = "lobby";
@@ -231,7 +239,7 @@ function maybeHoldIfAllAnswered(state: RoomState, now: number): RoomState {
 
 function advanceQuestion(state: RoomState, now: number): RoomState {
   const next = cloneState(state);
-  const questions = getQuestions(next.room.quizId, next.room.variant) ?? [];
+  const questions = playQuestions(next);
   const lastIndex = questions.length - 1;
   if (next.room.currentQuestionIndex >= lastIndex) {
     next.room.status = "finished";
