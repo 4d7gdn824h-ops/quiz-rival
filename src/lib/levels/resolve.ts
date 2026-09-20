@@ -1,5 +1,5 @@
 import { getQuestions } from "@/data/quizzes";
-import { flattenLevelQuestionIds, getPlaylist } from "@/data/levels";
+import { flattenLevelQuestionIds, resolvePlayLevels } from "@/data/levels";
 import type { Level, PlaylistId, QuizQuestion, QuizVariant } from "@/data/types";
 import type { Answer } from "@/lib/game/types";
 
@@ -8,10 +8,14 @@ export function getPlayQuestions(
   quizId: string,
   variant: QuizVariant,
   playlistId: PlaylistId = "full",
+  levelId?: string | null,
 ): QuizQuestion[] {
   const bank = getQuestions(quizId, variant) ?? [];
   const byId = new Map(bank.map((question) => [question.id, question]));
-  const ids = flattenLevelQuestionIds(getPlaylist(quizId, playlistId), variant);
+  const ids = flattenLevelQuestionIds(
+    resolvePlayLevels(quizId, playlistId, levelId),
+    variant,
+  );
   const resolved = ids
     .map((id) => byId.get(id))
     .filter((question): question is QuizQuestion => Boolean(question));

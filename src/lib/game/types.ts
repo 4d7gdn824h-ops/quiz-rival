@@ -12,6 +12,8 @@ export interface Room {
   questionEndsAt: number | null;
   questionOrder: number[];
   playlistId: PlaylistId;
+  /** When set with `playlistId: "tiny"`, the room plays that one micro-round. */
+  levelId: string | null;
   createdAt: number;
 }
 
@@ -58,6 +60,7 @@ export interface RoomSnapshot {
     questionCount: number;
     questionSeconds: number;
     playlistId: PlaylistId;
+    levelId: string | null;
     currentLevelId: string | null;
   };
   levels: PublicLevel[];
@@ -74,6 +77,7 @@ export interface GameStore {
     quizId: string;
     variant: QuizVariant;
     playlistId?: PlaylistId;
+    levelId?: string | null;
   }): Promise<{ state: RoomState; player: Player }>;
   getState(code: string): Promise<RoomState | null>;
   saveState(state: RoomState): Promise<void>;

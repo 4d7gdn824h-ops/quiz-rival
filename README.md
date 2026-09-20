@@ -69,17 +69,14 @@ npm run build   # production build
 npm start       # serve the build
 ```
 
-## Next: tiny levels (Duolingo-style)
+## Tiny levels path
 
-Marcin confirmed a **tiny levels** pattern (one theme, short round, clear win). Screenshot references are still incoming — we will restructure pack content + UI around levels when they arrive, not bolt a skill tree on later.
+**Chłopi** is a 5-node linear path (lektura → Jagna → wykluczenie → Boryna–Antek → teza). **Warm-up (EN)** has a shorter path (places / science / school bits). Variant B is the rematch wording (same level ids).
 
-**Already in the code (seams only):**
-
-- `Level` in `src/data/types.ts`: `{ id, packId, title, theme, questionIds, passRule }`
-- `src/data/levels.ts` slices **Chłopi** into themed micro-rounds (lektura / Jagna / wykluczenie / Boryna–Antek / teza) and **Warm-up (EN)** into places / science / school bits. Variant B is the rematch path (same level ids, B wording).
-- Rooms play a **playlist**: default `"full"` is one temporary mega-level (today’s 8-question race, unchanged). Flip `DEFAULT_PLAYLIST_ID` (or a room `playlistId`) to `"tiny"` to race a linear playlist of those levels — same realtime, no new matchmaking.
-- Pass rules: complete the round, or `minCorrect`. Evaluated in `src/lib/levels/resolve.ts`.
-- Home/lobby show a light “levels mapped” line only. **No** skill tree, streaks, hearts, or cosmetics until the screenshots land.
+- Home (pack selected) and lobby show tappable nodes. Node 1 starts unlocked. Finishing node N unlocks N+1. Already-unlocked nodes stay free to replay.
+- Tap a node → room uses `playlistId: "tiny"` plus that `levelId`, so the race is **that micro-round only** (existing `Level` / `getPlayQuestions` seam). Create room without a node still starts the full 8-question pack.
+- Unlock progress is stored on the device (`quizrival-path-progress`). Both siblings play the same selected node; rivalry strip and live scoring are unchanged.
+- **No** skill tree, streaks, hearts, or cosmetics.
 
 ## Out of scope (intentionally)
 

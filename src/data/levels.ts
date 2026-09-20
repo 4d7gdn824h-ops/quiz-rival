@@ -167,6 +167,10 @@ export function listMegaLevels(packId: string): Level[] {
   return LEVELS.filter((level) => level.packId === packId && level.mega);
 }
 
+export function getLevel(packId: string, levelId: string): Level | undefined {
+  return LEVELS.find((level) => level.packId === packId && level.id === levelId);
+}
+
 export function getPlaylist(packId: string, playlistId: PlaylistId = "full"): Level[] {
   if (playlistId === "tiny") {
     const tiny = listTinyLevels(packId);
@@ -174,6 +178,30 @@ export function getPlaylist(packId: string, playlistId: PlaylistId = "full"): Le
   }
   const mega = listMegaLevels(packId);
   return mega.length ? mega : listTinyLevels(packId);
+}
+
+/** One micro-round when `levelId` is set; otherwise the room playlist. */
+export function resolvePlayLevels(
+  packId: string,
+  playlistId: PlaylistId = "full",
+  levelId?: string | null,
+): Level[] {
+  if (levelId) {
+    const one = getLevel(packId, levelId);
+    if (one) return [one];
+  }
+  return getPlaylist(packId, playlistId);
+}
+
+/** Node N is unlocked when N is first, or node N−1 is completed. */
+export function isTinyLevelUnlocked(
+  levels: Pick<Level, "id">[],
+  completedIds: readonly string[],
+  levelId: string,
+): boolean {
+  const index = levels.findIndex((level) => level.id === levelId);
+  if (index <= 0) return true;
+  return completedIds.includes(levels[index - 1].id);
 }
 
 export function flattenLevelQuestionIds(levels: Level[], variant: QuizVariant): string[] {

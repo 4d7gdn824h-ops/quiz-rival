@@ -2,12 +2,15 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { PACK_CATALOG } from "@/data/catalog";
-import type { QuizVariant } from "@/data/types";
+import { listTinyLevels } from "@/data/levels";
+import type { PublicLevel, QuizVariant } from "@/data/types";
 import { createRoom, joinRoom } from "@/lib/client/api";
+import { readCompletedLevelIds } from "@/lib/client/path-progress";
 import { writeSession } from "@/lib/client/session";
 import { normalizeRoomCode } from "@/lib/ids";
+import { TinyPath } from "./TinyPath";
 
 export function HomeClient() {
   const router = useRouter();
@@ -23,18 +26,55 @@ export function HomeClient() {
     [quizId],
   );
 
+  const pathLevels = useMemo<PublicLevel[]>(
+    () =>
+      listTinyLevels(quizId).map((level) => ({
+        id: level.id,
+        title: level.title,
+        theme: level.theme,
+        questionCount: level.questionIds[variant]?.length ?? 0,
+        mega: level.mega,
+      })),
+    [quizId, variant],
+  );
+
+  const [completedIds, setCompletedIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    const sync = () => setCompletedIds(readCompletedLevelIds(quizId));
+    sync();
+    const onVis = () => {
+      if (document.visibilityState === "visible") sync();
+    };
+    window.addEventListener("focus", sync);
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.removeEventListener("focus", sync);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [quizId]);
+
+  async function openRoom(levelId?: string) {
+    const result = await createRoom({
+      name,
+      quizId,
+      variant,
+      ...(levelId ? { playlistId: "tiny" as const, levelId } : {}),
+    });
+    writeSession({
+      playerId: result.player.id,
+      roomCode: result.player.roomCode,
+      name: result.player.name,
+    });
+    router.push(`/room/${result.player.roomCode}`);
+  }
+
   async function onCreate(event: FormEvent) {
     event.preventDefault();
     setError(null);
     setBusy("create");
     try {
-      const result = await createRoom({ name, quizId, variant });
-      writeSession({
-        playerId: result.player.id,
-        roomCode: result.player.roomCode,
-        name: result.player.name,
-      });
-      router.push(`/room/${result.player.roomCode}`);
+      await openRoom();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not create room");
     } finally {
@@ -146,13 +186,36 @@ export function HomeClient() {
             ))}
           </div>
         </fieldset>
+        {pathLevels.length ? (
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-white/80">Tiny levels</p>
+            <TinyPath
+              levels={pathLevels}
+              completedIds={completedIds}
+              disabled={busy !== null}
+              onSelect={(levelId) => {
+                setError(null);
+                setBusy("create");
+                void openRoom(levelId)
+                  .catch((err) => {
+                    setError(err instanceof Error ? err.message : "Could not create room");
+                  })
+                  .finally(() => setBusy(null));
+              }}
+            />
+            <p className="text-xs text-white/45">
+              Tap a node to race that micro-round. Finish it to unlock the next.
+              Already-cleared nodes stay open.
+            </p>
+          </div>
+        ) : null}
         <button className="btn-primary" disabled={busy !== null} type="submit">
           {busy === "create" ? "Opening…" : "Create room"}
         </button>
         <p className="text-xs text-white/45">
           {selected?.title} · {selected?.questionCount} questions · 25s each
-          {selected?.levelCount
-            ? ` · ${selected.levelCount} tiny levels mapped (path UI later)`
+          {pathLevels.length
+            ? ` · or tap a node for a ${pathLevels.length}-stop tiny path`
             : ""}
         </p>
       </form>

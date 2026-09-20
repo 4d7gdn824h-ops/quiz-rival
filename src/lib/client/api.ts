@@ -1,4 +1,4 @@
-import type { QuizVariant } from "@/data/types";
+import type { PlaylistId, QuizVariant } from "@/data/types";
 import type { RoomSnapshot } from "@/lib/game/types";
 
 async function parse<T>(res: Response): Promise<T> {
@@ -13,6 +13,8 @@ export async function createRoom(input: {
   name: string;
   quizId: string;
   variant: QuizVariant;
+  playlistId?: PlaylistId;
+  levelId?: string | null;
 }) {
   return parse<{
     player: { id: string; name: string; roomCode: string };
