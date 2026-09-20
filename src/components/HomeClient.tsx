@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useMemo, useState } from "react";
 import { PACK_CATALOG } from "@/data/catalog";
@@ -72,6 +73,14 @@ export function HomeClient() {
           Two kids. One quiz. Timer. Winner.
         </p>
       </header>
+
+      <Link href="/write" className="card block space-y-1 no-underline">
+        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-orange-300">
+          Kartkówka · 26 września
+        </p>
+        <h2 className="font-display text-3xl">Napisz wypracowanie</h2>
+        <p className="text-sm text-white/70">Write essay · pytanie problemowe · ~100 słów</p>
+      </Link>
 
       <label className="block space-y-2">
         <span className="text-sm font-medium text-white/80">Your display name</span>

@@ -112,9 +112,16 @@ body {
   background: rgba(190, 255, 120, 0.12);
 }
 
+textarea.field {
+  min-height: 6.5rem;
+  resize: vertical;
+  line-height: 1.45;
+}
+
 button:focus-visible,
 a:focus-visible,
-input:focus-visible {
+input:focus-visible,
+textarea:focus-visible {
   outline: 3px solid #beff78;
   outline-offset: 2px;
 }

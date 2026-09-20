@@ -22,6 +22,16 @@ Two phones on the same Wi-Fi, or **two browser windows** (even in one profile). 
 5. After the last question: **winner screen**. Host taps **Rematch** (same room, switches A↔B and reshuffles).
 6. Parents can open `/parent/key` (also linked from the host winner screen) for keys + English hints.
 
+## Writing coach (`/write`)
+
+Homework helper for the Klasa 8 *Chłopi* problem question (~100 words), due 26 September 2026.
+
+- Home page: **Napisz wypracowanie** / Write essay
+- Student UI is Polish. Step wizard: question → Tak/Nie/Częściowo → 1–3 themes → her own modern example → sentence boxes (thesis / book link / example / close) with a live word counter → assembled text + **Kopiuj**
+- Does **not** dump a finished essay. **Podpowiedź** reveals one sample sentence to adapt
+- Parent English coaching notes are hidden until **Pokaż wskazówki dla rodzica (EN)**
+- No quiz answer keys on this page
+
 Short-answer worksheet items were converted to multiple choice so auto-score is reliable.
 
 ## Realtime: local fallback vs Supabase
