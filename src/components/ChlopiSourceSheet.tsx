@@ -56,63 +56,64 @@ export function ChlopiSourceSheet({ open, onClose }: Props) {
         onClick={(event) => event.stopPropagation()}
       >
         <div className="source-sheet-handle" aria-hidden="true" />
-        <div className="flex items-start justify-between gap-3">
-          <header className="space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-lime-300">
-              {SOURCE_KICKER}
-            </p>
-            <h2 id={titleId} className="font-display text-3xl leading-tight">
-              {SOURCE_TITLE}
-            </h2>
-            <p className="text-sm text-white/60">{SOURCE_BYLINE}</p>
-          </header>
-          <button
-            ref={closeRef}
-            type="button"
-            className="shrink-0 pt-1 text-sm font-semibold text-white/70 underline underline-offset-4"
-            onClick={onClose}
-          >
-            Zamknij
-          </button>
+        <div className="source-sheet-body">
+          <div className="flex items-start justify-between gap-3">
+            <header className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-lime-300">
+                {SOURCE_KICKER}
+              </p>
+              <h2 id={titleId} className="font-display text-3xl leading-tight">
+                {SOURCE_TITLE}
+              </h2>
+              <p className="text-sm text-white/60">{SOURCE_BYLINE}</p>
+            </header>
+            <button
+              ref={closeRef}
+              type="button"
+              className="shrink-0 pt-1 text-sm font-semibold text-white/70 underline underline-offset-4"
+              onClick={onClose}
+            >
+              Zamknij
+            </button>
+          </div>
+
+          <p className="text-sm leading-relaxed text-white/75">{SOURCE_INTRO}</p>
+
+          <section className="card space-y-2">
+            <h3 className="text-sm font-semibold text-white/55">Pytanie problemowe</h3>
+            <p className="text-[1.02rem] leading-relaxed text-white/90">{SOURCE_PROMPT}</p>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="font-display text-xl">Lektura w skrócie</h3>
+            <ul className="list-disc space-y-2 pl-5 text-sm leading-relaxed text-white/80">
+              {SOURCE_FACTS.map((fact) => (
+                <li key={fact}>{fact}</li>
+              ))}
+            </ul>
+          </section>
+
+          <section className="space-y-3">
+            <h3 className="font-display text-xl">Wątki z powieści</h3>
+            {SOURCE_SECTIONS.map((section) => (
+              <article key={section.id} className="card space-y-1.5">
+                <h4 className="font-semibold text-lime-200">{section.title}</h4>
+                <p className="text-sm leading-relaxed text-white/80">{section.body}</p>
+              </article>
+            ))}
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="font-display text-xl">Jak korzystać</h3>
+            <ul className="list-disc space-y-2 pl-5 text-sm leading-relaxed text-white/70">
+              {SOURCE_USE.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </section>
         </div>
-
-        <p className="text-sm leading-relaxed text-white/75">{SOURCE_INTRO}</p>
-
-        <section className="card space-y-2">
-          <h3 className="text-sm font-semibold text-white/55">Pytanie problemowe</h3>
-          <p className="text-[1.02rem] leading-relaxed text-white/90">{SOURCE_PROMPT}</p>
-        </section>
-
-        <section className="space-y-2">
-          <h3 className="font-display text-xl">Lektura w skrócie</h3>
-          <ul className="list-disc space-y-2 pl-5 text-sm leading-relaxed text-white/80">
-            {SOURCE_FACTS.map((fact) => (
-              <li key={fact}>{fact}</li>
-            ))}
-          </ul>
-        </section>
-
-        <section className="space-y-3">
-          <h3 className="font-display text-xl">Wątki z powieści</h3>
-          {SOURCE_SECTIONS.map((section) => (
-            <article key={section.id} className="card space-y-1.5">
-              <h4 className="font-semibold text-lime-200">{section.title}</h4>
-              <p className="text-sm leading-relaxed text-white/80">{section.body}</p>
-            </article>
-          ))}
-        </section>
-
-        <section className="space-y-2">
-          <h3 className="font-display text-xl">Jak korzystać</h3>
-          <ul className="list-disc space-y-2 pl-5 text-sm leading-relaxed text-white/70">
-            {SOURCE_USE.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </section>
-
         <div className="source-sheet-actions">
-          <button ref={closeRef} type="button" className="btn-primary" onClick={onClose}>
+          <button type="button" className="btn-primary" onClick={onClose}>
             Zamknij
           </button>
         </div>

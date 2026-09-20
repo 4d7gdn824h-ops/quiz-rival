@@ -104,7 +104,7 @@ export function WriteCoach() {
   }
 
   return (
-    <main lang="pl" className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 px-4 py-6">
+    <main lang="pl" className="write-main mx-auto flex w-full max-w-md flex-1 flex-col gap-5 px-4 py-6">
       <div className="write-toolbar">
         <p className="text-xs font-semibold uppercase tracking-[0.28em] text-lime-300">
           Klasa 8 · do 26 września
