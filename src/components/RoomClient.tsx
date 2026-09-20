@@ -220,6 +220,16 @@ export function RoomClient({ code }: { code: string }) {
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 px-4 py-6">
+      {snapshot.room.status === "lobby" || snapshot.room.status === "playing" ? (
+        <div className="sticky top-0 z-20 -mx-4 -mt-6 border-b border-white/5 bg-[#0c1022]/90 px-4 pt-4 pb-2 backdrop-blur-md">
+          <Scoreboard
+            players={snapshot.players}
+            youId={playerId ?? undefined}
+            live={snapshot.room.status === "playing"}
+          />
+        </div>
+      ) : null}
+
       <header className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-[0.3em] text-white/50">Room</p>
@@ -230,12 +240,6 @@ export function RoomClient({ code }: { code: string }) {
           <p>Variant {snapshot.room.variant}</p>
         </div>
       </header>
-
-      <Scoreboard
-        players={snapshot.players}
-        youId={playerId ?? undefined}
-        live={snapshot.room.status === "playing"}
-      />
 
       {error ? (
         <p className="rounded-2xl bg-red-500/15 px-4 py-3 text-sm text-red-200" role="alert">

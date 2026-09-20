@@ -158,3 +158,140 @@ textarea:focus-visible {
   white-space: nowrap;
   border: 0;
 }
+
+.rivalry-strip {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+  padding: 0.2rem 0;
+}
+
+.rivalry-side {
+  --flash: #beff78;
+  min-width: 0;
+  border-radius: 1.15rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0.7rem 0.7rem 0.65rem;
+  text-align: center;
+}
+
+.rivalry-side.is-lead {
+  border-color: color-mix(in srgb, var(--flash) 55%, rgba(255, 255, 255, 0.12));
+  background: color-mix(in srgb, var(--flash) 10%, rgba(255, 255, 255, 0.05));
+}
+
+.rivalry-empty {
+  border-style: dashed;
+  border-color: rgba(255, 255, 255, 0.18);
+  background: transparent;
+}
+
+.rivalry-tag {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.rivalry-name {
+  margin-top: 0.15rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-display), var(--font-sans), system-ui, sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.rivalry-score {
+  margin-top: 0.15rem;
+  font-family: var(--font-display), var(--font-sans), system-ui, sans-serif;
+  font-size: 2.15rem;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.rivalry-flash .rivalry-score {
+  animation: rivalry-score-punch 1.05s ease-out;
+}
+
+@keyframes rivalry-score-punch {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  18% {
+    transform: scale(1.12);
+  }
+}
+
+.rivalry-status {
+  margin-top: 0.3rem;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.rivalry-status.is-locked {
+  color: #beff78;
+}
+
+.rivalry-vs {
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 209, 102, 0.85);
+  background: #161427;
+  color: #ffd166;
+  font-family: var(--font-display), var(--font-sans), system-ui, sans-serif;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 4px #0c1022;
+}
+
+.rivalry-flash {
+  animation: rivalry-lead-flash 1.05s ease-out;
+}
+
+@keyframes rivalry-lead-flash {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--flash) 0%, transparent);
+  }
+  18% {
+    transform: scale(1.05);
+    background: color-mix(in srgb, var(--flash) 42%, rgba(255, 255, 255, 0.06));
+    box-shadow:
+      0 0 0 4px color-mix(in srgb, var(--flash) 85%, transparent),
+      0 0 36px color-mix(in srgb, var(--flash) 60%, transparent);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--flash) 0%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rivalry-flash,
+  .rivalry-flash .rivalry-score {
+    animation: none;
+  }
+
+  .rivalry-flash {
+    background: color-mix(in srgb, var(--flash) 28%, rgba(255, 255, 255, 0.06));
+  }
+}
