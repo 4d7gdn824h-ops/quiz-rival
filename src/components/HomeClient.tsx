@@ -103,24 +103,14 @@ export function HomeClient() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-4 py-8">
-      <header className="space-y-3 text-center">
+    <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 px-4 py-6">
+      <header className="space-y-1.5 text-center">
         <p className="text-xs font-semibold uppercase tracking-[0.35em] text-lime-300">
           Live sibling challenge
         </p>
-        <h1 className="font-display text-5xl font-bold tracking-tight">QuizRival</h1>
-        <p className="text-base text-white/70">
-          Two kids. One quiz. Timer. Winner.
-        </p>
+        <h1 className="font-display text-4xl font-bold tracking-tight">QuizRival</h1>
+        <p className="text-sm text-white/70">Two kids. One quiz. Timer. Winner.</p>
       </header>
-
-      <Link href="/write" className="card block space-y-1 no-underline">
-        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-orange-300">
-          Kartkówka · 26 września
-        </p>
-        <h2 className="font-display text-3xl">Napisz wypracowanie</h2>
-        <p className="text-sm text-white/70">Write essay · pytanie problemowe · ~100 słów</p>
-      </Link>
 
       <label className="block space-y-2">
         <span className="text-sm font-medium text-white/80">Your display name</span>
@@ -141,8 +131,11 @@ export function HomeClient() {
         </p>
       ) : null}
 
-      <form onSubmit={onCreate} className="card space-y-4">
-        <h2 className="font-display text-2xl">Create room</h2>
+      <form onSubmit={onCreate} className="card card-hero space-y-4">
+        <div className="space-y-1">
+          <h2 className="font-display text-3xl">Create room</h2>
+          <p className="text-sm text-white/65">Host the sibling race. Share the 4-letter code.</p>
+        </div>
         <fieldset className="space-y-2">
           <legend className="text-sm font-medium text-white/80">Quiz pack</legend>
           <div className="grid gap-2">
@@ -196,6 +189,24 @@ export function HomeClient() {
             : ""}
         </p>
       </form>
+
+      <Link
+        href="/write"
+        className="card card-quiet flex items-center justify-between gap-3 no-underline"
+      >
+        <span className="min-w-0 space-y-0.5">
+          <span className="block text-[0.7rem] font-semibold uppercase tracking-[0.22em] text-orange-300">
+            Kartkówka · 26 września
+          </span>
+          <h2 className="font-display text-xl leading-tight">Napisz wypracowanie</h2>
+          <span className="block text-xs text-white/55">
+            Write essay · pytanie problemowe · ~100 słów
+          </span>
+        </span>
+        <span className="shrink-0 text-white/40" aria-hidden="true">
+          →
+        </span>
+      </Link>
 
       {pathLevels.length ? (
         <section className="card space-y-2">
