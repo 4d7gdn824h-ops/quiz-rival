@@ -39,6 +39,17 @@ body {
   backdrop-filter: blur(12px);
 }
 
+.card-hero {
+  border-color: rgba(190, 255, 120, 0.42);
+  box-shadow:
+    0 0 0 1px rgba(190, 255, 120, 0.16),
+    0 18px 40px rgba(0, 0, 0, 0.28);
+}
+
+.card-quiet {
+  padding: 0.8rem 1rem;
+}
+
 .field {
   width: 100%;
   border-radius: 1rem;
