@@ -62,15 +62,18 @@ export function ReadAloudButton({ text, lang, idleLabel, className }: Props) {
     }
     const myGen = generation.current + 1;
     generation.current = myGen;
+    setSession({ text, lang, speaking: true });
     const started = speakText(text, lang, {
       onend: () => {
         if (generation.current === myGen) setSession({ text, lang, speaking: false });
       },
-      onerror: () => {
-        if (generation.current === myGen) setSession({ text, lang, speaking: false });
+      onerror: (fatal) => {
+        if (fatal && generation.current === myGen) {
+          setSession({ text, lang, speaking: false });
+        }
       },
     });
-    setSession({ text, lang, speaking: started });
+    if (!started) setSession({ text, lang, speaking: false });
   }, [lang, speaking, stop, text]);
 
   const label = idleLabel ?? (lang === "en" ? "Read" : "Czytaj");

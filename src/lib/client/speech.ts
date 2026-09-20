@@ -68,7 +68,7 @@ export function questionSpeechText(question: {
 export function speakText(
   text: string,
   lang: SpeechLocale,
-  handlers: { onend: () => void; onerror: () => void },
+  handlers: { onend: () => void; onerror: (fatal: boolean) => void },
 ): boolean {
   const trimmed = text.replace(/\s+/g, " ").trim();
   if (!trimmed || !speechSupported()) return false;
@@ -86,12 +86,22 @@ export function speakText(
     clearKeepAlive();
     handlers.onend();
   };
-  utterance.onerror = () => {
+  utterance.onerror = (event) => {
     clearKeepAlive();
-    handlers.onerror();
+    const reason = event.error;
+    const cancelled = reason === "interrupted" || reason === "canceled";
+    // Empty-voice / headless engines often fire synthesis-failed immediately.
+    // Keep the session open so Stop still works; user can cancel.
+    const fatal = cancelled || reason === "not-allowed";
+    handlers.onerror(fatal);
   };
 
-  synth.speak(utterance);
+  try {
+    synth.speak(utterance);
+  } catch {
+    handlers.onerror(true);
+    return false;
+  }
 
   const isIOS = /iPad|iPhone|iPod/i.test(navigator.userAgent);
   if (!isIOS && trimmed.length > 180) {
