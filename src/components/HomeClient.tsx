@@ -186,29 +186,6 @@ export function HomeClient() {
             ))}
           </div>
         </fieldset>
-        {pathLevels.length ? (
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-white/80">Tiny levels</p>
-            <TinyPath
-              levels={pathLevels}
-              completedIds={completedIds}
-              disabled={busy !== null}
-              onSelect={(levelId) => {
-                setError(null);
-                setBusy("create");
-                void openRoom(levelId)
-                  .catch((err) => {
-                    setError(err instanceof Error ? err.message : "Could not create room");
-                  })
-                  .finally(() => setBusy(null));
-              }}
-            />
-            <p className="text-xs text-white/45">
-              Tap a node to race that micro-round. Finish it to unlock the next.
-              Already-cleared nodes stay open.
-            </p>
-          </div>
-        ) : null}
         <button className="btn-primary" disabled={busy !== null} type="submit">
           {busy === "create" ? "Opening…" : "Create room"}
         </button>
@@ -219,6 +196,30 @@ export function HomeClient() {
             : ""}
         </p>
       </form>
+
+      {pathLevels.length ? (
+        <section className="card space-y-2">
+          <p className="text-sm font-medium text-white/80">Tiny levels</p>
+          <TinyPath
+            levels={pathLevels}
+            completedIds={completedIds}
+            disabled={busy !== null}
+            onSelect={(levelId) => {
+              setError(null);
+              setBusy("create");
+              void openRoom(levelId)
+                .catch((err) => {
+                  setError(err instanceof Error ? err.message : "Could not create room");
+                })
+                .finally(() => setBusy(null));
+            }}
+          />
+          <p className="text-xs text-white/45">
+            Tap a node to race that micro-round. Finish it to unlock the next.
+            Already-cleared nodes stay open.
+          </p>
+        </section>
+      ) : null}
 
       <form onSubmit={onJoin} className="card space-y-4">
         <h2 className="font-display text-2xl">Join room</h2>

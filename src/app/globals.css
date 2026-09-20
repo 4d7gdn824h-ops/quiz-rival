@@ -287,28 +287,29 @@ textarea:focus-visible {
 
 .tiny-path {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0;
+  flex-direction: column;
   margin: 0;
-  padding: 0.35rem 0 0.15rem;
+  padding: 0.15rem 0;
   list-style: none;
 }
 
 .tiny-path-step {
   position: relative;
   display: flex;
-  min-width: 0;
-  flex: 1;
-  justify-content: center;
+  align-items: stretch;
+}
+
+.tiny-path-step + .tiny-path-step {
+  margin-top: 0.35rem;
+  padding-top: 0.2rem;
 }
 
 .tiny-path-edge {
   position: absolute;
-  top: 1.35rem;
-  right: 50%;
-  width: 100%;
-  height: 3px;
+  top: -0.55rem;
+  left: 1.3rem;
+  width: 3px;
+  height: 1.1rem;
   background: rgba(255, 255, 255, 0.14);
 }
 
@@ -321,14 +322,14 @@ textarea:focus-visible {
   z-index: 1;
   display: flex;
   width: 100%;
-  min-width: 0;
-  flex-direction: column;
+  min-height: 3.15rem;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0;
+  gap: 0.75rem;
+  padding: 0.28rem 0.2rem;
   border: 0;
   background: transparent;
   color: inherit;
+  text-align: left;
 }
 
 .tiny-path-node:disabled {
@@ -373,12 +374,20 @@ textarea:focus-visible {
 }
 
 .tiny-path-title {
-  max-width: 4.4rem;
-  font-size: 0.68rem;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  font-size: 0.95rem;
   font-weight: 700;
-  line-height: 1.2;
-  text-align: center;
+  line-height: 1.25;
+  text-align: left;
   color: rgba(255, 255, 255, 0.72);
+}
+
+.tiny-path-meta {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.45);
 }
 
 .tiny-path-node.is-locked .tiny-path-title {

@@ -31,12 +31,15 @@ export function TinyPath({
           <li key={level.id} className="tiny-path-step">
             {index > 0 ? (
               <span
-                className={`tiny-path-edge${unlocked || completed ? " is-on" : ""}`}
+                className={`tiny-path-edge${
+                  completedIds.includes(levels[index - 1]?.id ?? "") ? " is-on" : ""
+                }`}
                 aria-hidden="true"
               />
             ) : null}
             <button
               type="button"
+              data-level-id={level.id}
               className={[
                 "tiny-path-node",
                 locked ? "is-locked" : "",
@@ -56,7 +59,16 @@ export function TinyPath({
               <span className="tiny-path-dot" aria-hidden="true">
                 {completed ? "✓" : index + 1}
               </span>
-              <span className="tiny-path-title">{level.title}</span>
+              <span className="tiny-path-title">
+                {level.title}
+                {level.questionCount ? (
+                  <span className="tiny-path-meta">
+                    {level.questionCount === 1
+                      ? "1 question"
+                      : `${level.questionCount} questions`}
+                  </span>
+                ) : null}
+              </span>
               <span className="sr-only">
                 {locked
                   ? "Locked. Finish the previous node first."
