@@ -30,7 +30,8 @@ Homework helper for the Klasa 8 *Chłopi* problem question (~100 words), due 26 
 - Student UI is Polish. Step wizard: question → Tak/Nie/Częściowo → 1–3 themes → her own modern example → sentence boxes (thesis / book link / example / close) with a live word counter → assembled text + **Kopiuj**
 - Does **not** dump a finished essay. **Podpowiedź** reveals one sample sentence to adapt
 - Parent English coaching notes are hidden until **Pokaż wskazówki dla rodzica (EN)**
-- **Czytaj** (browser Web Speech API, `speechSynthesis`) reads the current step: question/instructions, revealed **Podpowiedź** tips, or the assembled final paragraph. Tap **Stop** to cancel. Prefers a `pl-PL` voice; no API keys. If the browser has no speech synthesis, a one-line notice is shown instead.
+- Persistent **Czytaj** (header) opens the *Chłopi* source sheet/overlay: problem question, short lektura facts, and the three motifs (Jagna / wykluczenie / Boryna–Antek). Dismiss (**Zamknij**, backdrop, Escape) returns to the **same step** with the draft intact. Motif notes only — no model essay, no quiz keys.
+- **Na głos** (browser Web Speech API, `speechSynthesis`) is the secondary read-aloud: current step, revealed **Podpowiedź** tips, or the assembled final paragraph. Tap **Stop** to cancel. Prefers a `pl-PL` voice; no API keys. If the browser has no speech synthesis, a one-line notice is shown instead.
 - No quiz answer keys on this page
 
 ## Quiz play UX

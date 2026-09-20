@@ -102,6 +102,95 @@ body {
   border-color: rgba(255, 180, 140, 0.55);
 }
 
+.btn-source {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.75rem;
+  padding: 0.45rem 1rem;
+  border-radius: 1rem;
+  background: #beff78;
+  color: #10200a;
+  font-weight: 800;
+  font-size: 1rem;
+}
+
+.write-main {
+  scroll-padding-top: 4.75rem;
+}
+
+.write-main textarea.field,
+.write-main h2 {
+  scroll-margin-top: 4.75rem;
+}
+
+.write-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: -1.5rem -1rem 0;
+  padding: 0.75rem 1rem 0.65rem;
+  background: #0c1022;
+}
+
+.source-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(6, 8, 18, 0.72);
+  backdrop-filter: blur(8px);
+}
+
+.source-sheet {
+  position: fixed;
+  z-index: 50;
+  left: 50%;
+  bottom: 0;
+  display: flex;
+  width: min(28rem, 100%);
+  max-height: min(90dvh, 46rem);
+  transform: translateX(-50%);
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0.55rem 1.15rem calc(0.85rem + env(safe-area-inset-bottom));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom: 0;
+  border-radius: 1.5rem 1.5rem 0 0;
+  background:
+    radial-gradient(700px 280px at 10% -20%, rgba(255, 90, 54, 0.16), transparent 55%),
+    #12162a;
+  box-shadow: 0 -18px 48px rgba(0, 0, 0, 0.35);
+}
+
+.source-sheet-body {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 1rem;
+  overflow: auto;
+  padding-bottom: 0.35rem;
+}
+
+.source-sheet-handle {
+  width: 3rem;
+  height: 0.3rem;
+  margin: 0.15rem auto 0.25rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.source-sheet-actions {
+  flex-shrink: 0;
+  padding-top: 0.75rem;
+  background: #12162a;
+}
+
 .choice {
   display: block;
   border-radius: 1.1rem;
