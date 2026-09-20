@@ -2,10 +2,13 @@
 
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { getCatalogItem } from "@/data/catalog";
 import { QUESTION_MS, POLL_MS } from "@/lib/constants";
 import { fetchSnapshot, joinRoom, roomAction } from "@/lib/client/api";
 import { readSession, writeSession } from "@/lib/client/session";
+import { questionSpeechText, type SpeechLocale } from "@/lib/client/speech";
 import type { RoomSnapshot } from "@/lib/game/types";
+import { ReadAloudButton } from "./ReadAloudButton";
 import { Scoreboard } from "./Scoreboard";
 import { TimerBar } from "./TimerBar";
 
@@ -166,6 +169,8 @@ export function RoomClient({ code }: { code: string }) {
   const currentLevelTitle = snapshot?.levels.find(
     (level) => level.id === snapshot.room.currentLevelId && !level.mega,
   )?.title;
+  const packLang: SpeechLocale =
+    getCatalogItem(snapshot?.room.quizId ?? "")?.language === "en" ? "en" : "pl";
 
   if (!ready) {
     return (
@@ -279,6 +284,12 @@ export function RoomClient({ code }: { code: string }) {
             <h2 className="font-display text-[1.65rem] leading-snug">
               {snapshot.currentQuestion.prompt}
             </h2>
+            <ReadAloudButton
+              text={questionSpeechText(snapshot.currentQuestion)}
+              lang={packLang}
+              idleLabel={packLang === "en" ? "Read" : "Czytaj"}
+              className="btn-read w-full"
+            />
           </article>
           <div className="grid gap-3">
             {snapshot.currentQuestion.options.map((option) => {

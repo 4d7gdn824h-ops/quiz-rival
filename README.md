@@ -2,7 +2,7 @@
 
 Working name (easy to rename). Tagline: **two kids, one quiz, timer, winner.**
 
-Week-1 MVP: a **sibling live challenge** with hardcoded quiz packs. No auth, Stripe, uploads, PDF, or voice.
+Week-1 MVP: a **sibling live challenge** with hardcoded quiz packs. No auth, Stripe, uploads, PDF, or paid voice APIs.
 
 ## Run locally
 
@@ -30,7 +30,12 @@ Homework helper for the Klasa 8 *Chłopi* problem question (~100 words), due 26 
 - Student UI is Polish. Step wizard: question → Tak/Nie/Częściowo → 1–3 themes → her own modern example → sentence boxes (thesis / book link / example / close) with a live word counter → assembled text + **Kopiuj**
 - Does **not** dump a finished essay. **Podpowiedź** reveals one sample sentence to adapt
 - Parent English coaching notes are hidden until **Pokaż wskazówki dla rodzica (EN)**
+- **Czytaj** (browser Web Speech API, `speechSynthesis`) reads the current step: question/instructions, revealed **Podpowiedź** tips, or the assembled final paragraph. Tap **Stop** to cancel. Prefers a `pl-PL` voice; no API keys. If the browser has no speech synthesis, a one-line notice is shown instead.
 - No quiz answer keys on this page
+
+## Quiz play UX
+
+- Each question card has **Czytaj** (Polish packs) or **Read** (English warm-up). It reads the stem, plus options when they are short. Same Web Speech API; **Stop** cancels. Prefers `pl-PL` or `en-US`/`en-GB` voices, then the default.
 
 Short-answer worksheet items were converted to multiple choice so auto-score is reliable.
 
@@ -78,4 +83,4 @@ Marcin confirmed a **tiny levels** pattern (one theme, short round, clear win). 
 
 ## Out of scope (intentionally)
 
-Auth, Stripe, file upload / vision, PDF print, voice TTS/STT, Google OAuth, XP shop, stranger matchmaking, chat, streaks, hearts, skill-tree cosmetics.
+Auth, Stripe, file upload / vision, PDF print, paid/cloud TTS (ElevenLabs etc.), STT, Google OAuth, XP shop, stranger matchmaking, chat, streaks, hearts, skill-tree cosmetics.
