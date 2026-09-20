@@ -1,0 +1,204 @@
+{
+  "id": "warmup-en",
+  "title": "Warm-up (EN)",
+  "language": "en",
+  "source": "Easy general-knowledge sample for English demo",
+  "variants": {
+    "A": [
+      {
+        "id": "warmup-en-a-q1",
+        "prompt": "What is the capital of France?",
+        "options": [
+          { "id": "A", "text": "London" },
+          { "id": "B", "text": "Paris" },
+          { "id": "C", "text": "Madrid" },
+          { "id": "D", "text": "Berlin" }
+        ],
+        "correctOptionId": "B",
+        "parentHint": "Paris is the capital of France."
+      },
+      {
+        "id": "warmup-en-a-q2",
+        "prompt": "What is 7 × 8?",
+        "options": [
+          { "id": "A", "text": "48" },
+          { "id": "B", "text": "54" },
+          { "id": "C", "text": "56" },
+          { "id": "D", "text": "63" }
+        ],
+        "correctOptionId": "C",
+        "parentHint": "7 × 8 = 56."
+      },
+      {
+        "id": "warmup-en-a-q3",
+        "prompt": "Which planet is closest to the Sun?",
+        "options": [
+          { "id": "A", "text": "Mercury" },
+          { "id": "B", "text": "Venus" },
+          { "id": "C", "text": "Earth" },
+          { "id": "D", "text": "Mars" }
+        ],
+        "correctOptionId": "A",
+        "parentHint": "Mercury is the innermost planet."
+      },
+      {
+        "id": "warmup-en-a-q4",
+        "prompt": "At what temperature does water freeze?",
+        "options": [
+          { "id": "A", "text": "100°C" },
+          { "id": "B", "text": "0°C" },
+          { "id": "C", "text": "10°C" },
+          { "id": "D", "text": "32°C" }
+        ],
+        "correctOptionId": "B",
+        "parentHint": "Water freezes at 0°C (32°F). The question uses Celsius."
+      },
+      {
+        "id": "warmup-en-a-q5",
+        "prompt": "Who wrote the Harry Potter books?",
+        "options": [
+          { "id": "A", "text": "J.R.R. Tolkien" },
+          { "id": "B", "text": "C.S. Lewis" },
+          { "id": "C", "text": "Roald Dahl" },
+          { "id": "D", "text": "J.K. Rowling" }
+        ],
+        "correctOptionId": "D",
+        "parentHint": "J.K. Rowling wrote Harry Potter."
+      },
+      {
+        "id": "warmup-en-a-q6",
+        "prompt": "How many continents are there on Earth?",
+        "options": [
+          { "id": "A", "text": "5" },
+          { "id": "B", "text": "6" },
+          { "id": "C", "text": "7" },
+          { "id": "D", "text": "8" }
+        ],
+        "correctOptionId": "C",
+        "parentHint": "The usual school answer is 7 continents."
+      },
+      {
+        "id": "warmup-en-a-q7",
+        "prompt": "The chemical formula H₂O is another name for:",
+        "options": [
+          { "id": "A", "text": "Salt" },
+          { "id": "B", "text": "Water" },
+          { "id": "C", "text": "Oxygen gas" },
+          { "id": "D", "text": "Carbon dioxide" }
+        ],
+        "correctOptionId": "B",
+        "parentHint": "H₂O is water."
+      },
+      {
+        "id": "warmup-en-a-q8",
+        "prompt": "Which is the largest ocean on Earth?",
+        "options": [
+          { "id": "A", "text": "Atlantic Ocean" },
+          { "id": "B", "text": "Indian Ocean" },
+          { "id": "C", "text": "Arctic Ocean" },
+          { "id": "D", "text": "Pacific Ocean" }
+        ],
+        "correctOptionId": "D",
+        "parentHint": "The Pacific is the largest ocean."
+      }
+    ],
+    "B": [
+      {
+        "id": "warmup-en-b-q1",
+        "prompt": "Which city is the capital of France?",
+        "options": [
+          { "id": "A", "text": "Rome" },
+          { "id": "B", "text": "Paris" },
+          { "id": "C", "text": "Lisbon" },
+          { "id": "D", "text": "Vienna" }
+        ],
+        "correctOptionId": "B",
+        "parentHint": "Paris."
+      },
+      {
+        "id": "warmup-en-b-q2",
+        "prompt": "What is seven times eight?",
+        "options": [
+          { "id": "A", "text": "56" },
+          { "id": "B", "text": "49" },
+          { "id": "C", "text": "64" },
+          { "id": "D", "text": "72" }
+        ],
+        "correctOptionId": "A",
+        "parentHint": "7 × 8 = 56."
+      },
+      {
+        "id": "warmup-en-b-q3",
+        "prompt": "Which planet orbits nearest the Sun?",
+        "options": [
+          { "id": "A", "text": "Jupiter" },
+          { "id": "B", "text": "Saturn" },
+          { "id": "C", "text": "Mercury" },
+          { "id": "D", "text": "Neptune" }
+        ],
+        "correctOptionId": "C",
+        "parentHint": "Mercury."
+      },
+      {
+        "id": "warmup-en-b-q4",
+        "prompt": "Water turns to ice at which Celsius temperature?",
+        "options": [
+          { "id": "A", "text": "0°C" },
+          { "id": "B", "text": "50°C" },
+          { "id": "C", "text": "100°C" },
+          { "id": "D", "text": "212°C" }
+        ],
+        "correctOptionId": "A",
+        "parentHint": "0°C."
+      },
+      {
+        "id": "warmup-en-b-q5",
+        "prompt": "The author of Harry Potter is:",
+        "options": [
+          { "id": "A", "text": "Suzanne Collins" },
+          { "id": "B", "text": "J.K. Rowling" },
+          { "id": "C", "text": "Rick Riordan" },
+          { "id": "D", "text": "Sharon Creech" }
+        ],
+        "correctOptionId": "B",
+        "parentHint": "J.K. Rowling."
+      },
+      {
+        "id": "warmup-en-b-q6",
+        "prompt": "Earth is usually divided into how many continents?",
+        "options": [
+          { "id": "A", "text": "Four" },
+          { "id": "B", "text": "Nine" },
+          { "id": "C", "text": "Seven" },
+          { "id": "D", "text": "Three" }
+        ],
+        "correctOptionId": "C",
+        "parentHint": "Seven."
+      },
+      {
+        "id": "warmup-en-b-q7",
+        "prompt": "H₂O is the formula for:",
+        "options": [
+          { "id": "A", "text": "Helium" },
+          { "id": "B", "text": "Hydrogen peroxide" },
+          { "id": "C", "text": "Water" },
+          { "id": "D", "text": "Ammonia" }
+        ],
+        "correctOptionId": "C",
+        "parentHint": "Water."
+      },
+      {
+        "id": "warmup-en-b-q8",
+        "prompt": "The biggest ocean in the world is the:",
+        "options": [
+          { "id": "A", "text": "Southern Ocean" },
+          { "id": "B", "text": "Pacific Ocean" },
+          { "id": "C", "text": "Atlantic Ocean" },
+          { "id": "D", "text": "Indian Ocean" }
+        ],
+        "correctOptionId": "B",
+        "parentHint": "Pacific Ocean."
+      }
+    ]
+  }
+}
