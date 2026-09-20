@@ -285,6 +285,120 @@ textarea:focus-visible {
   }
 }
 
+.tiny-path {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0.15rem 0;
+  list-style: none;
+}
+
+.tiny-path-step {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+
+.tiny-path-step + .tiny-path-step {
+  margin-top: 0.35rem;
+  padding-top: 0.2rem;
+}
+
+.tiny-path-edge {
+  position: absolute;
+  top: -0.55rem;
+  left: 1.3rem;
+  width: 3px;
+  height: 1.1rem;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.tiny-path-edge.is-on {
+  background: color-mix(in srgb, #beff78 70%, rgba(255, 255, 255, 0.2));
+}
+
+.tiny-path-node {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: 100%;
+  min-height: 3.15rem;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.28rem 0.2rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.tiny-path-node:disabled {
+  opacity: 1;
+}
+
+.tiny-path-dot {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  background: rgba(12, 16, 34, 0.95);
+  font-family: var(--font-display), var(--font-sans), system-ui, sans-serif;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.tiny-path-node.is-locked .tiny-path-dot {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.tiny-path-node.is-open .tiny-path-dot {
+  border-color: #beff78;
+  color: #beff78;
+  box-shadow: 0 0 0 3px rgba(190, 255, 120, 0.18);
+}
+
+.tiny-path-node.is-current .tiny-path-dot {
+  border-color: #beff78;
+  background: #beff78;
+  color: #10200a;
+  box-shadow: 0 0 0 4px rgba(190, 255, 120, 0.28);
+}
+
+.tiny-path-node.is-done .tiny-path-dot {
+  border-color: #beff78;
+  background: color-mix(in srgb, #beff78 22%, #0c1022);
+  color: #beff78;
+}
+
+.tiny-path-title {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: left;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.tiny-path-meta {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.tiny-path-node.is-locked .tiny-path-title {
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.tiny-path-node.is-current .tiny-path-title,
+.tiny-path-node.is-open .tiny-path-title {
+  color: #f4efe6;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .rivalry-flash,
   .rivalry-flash .rivalry-score {

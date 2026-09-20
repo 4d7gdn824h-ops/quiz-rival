@@ -1,3 +1,4 @@
+import { getLevel, listTinyLevels } from "@/data/levels";
 import type { PlaylistId, QuizVariant } from "@/data/types";
 import {
   ALL_ANSWERED_HOLD_MS,
@@ -19,7 +20,27 @@ export class GameError extends Error {
 }
 
 function playQuestions(state: RoomState) {
-  return getPlayQuestions(state.room.quizId, state.room.variant, state.room.playlistId);
+  return getPlayQuestions(
+    state.room.quizId,
+    state.room.variant,
+    state.room.playlistId,
+    state.room.levelId,
+  );
+}
+
+function resolveRoomLevel(
+  quizId: string,
+  playlistId: PlaylistId | undefined,
+  levelId?: string | null,
+): { playlistId: PlaylistId; levelId: string | null } {
+  if (!levelId) {
+    return { playlistId: playlistId ?? DEFAULT_PLAYLIST_ID, levelId: null };
+  }
+  const level = getLevel(quizId, levelId);
+  if (!level || level.mega) {
+    throw new GameError("Unknown tiny level", 404);
+  }
+  return { playlistId: "tiny", levelId: level.id };
 }
 
 function currentQuestionId(state: RoomState): string | null {
@@ -42,9 +63,14 @@ export function createInitialState(input: {
   quizId: string;
   variant: QuizVariant;
   playlistId?: PlaylistId;
+  levelId?: string | null;
 }): { state: RoomState; player: Player } {
-  const playlistId = input.playlistId ?? DEFAULT_PLAYLIST_ID;
-  const questions = getPlayQuestions(input.quizId, input.variant, playlistId);
+  const { playlistId, levelId } = resolveRoomLevel(
+    input.quizId,
+    input.playlistId,
+    input.levelId,
+  );
+  const questions = getPlayQuestions(input.quizId, input.variant, playlistId, levelId);
   if (!questions?.length) {
     throw new GameError("Unknown quiz pack", 404);
   }
@@ -65,6 +91,7 @@ export function createInitialState(input: {
     questionEndsAt: null,
     questionOrder: identityOrder(questions.length),
     playlistId,
+    levelId,
     createdAt: Date.now(),
   };
   host.roomCode = room.code;
@@ -184,7 +211,12 @@ export function rematchState(
   const next = cloneState(state);
   const nextVariant: QuizVariant =
     switchVariant && next.room.variant === "A" ? "B" : switchVariant ? "A" : next.room.variant;
-  const questions = getPlayQuestions(next.room.quizId, nextVariant, next.room.playlistId);
+  const questions = getPlayQuestions(
+    next.room.quizId,
+    nextVariant,
+    next.room.playlistId,
+    next.room.levelId,
+  );
   if (!questions?.length) throw new GameError("Quiz missing.", 500);
   next.room.variant = nextVariant;
   next.room.status = "lobby";
@@ -195,6 +227,31 @@ export function rematchState(
     : identityOrder(questions.length);
   next.answers = [];
   next.players = next.players.map((p) => ({ ...p, score: 0 }));
+  return next;
+}
+
+/** Host picks a tiny node in lobby (or after rematch). Same realtime rules, one micro-round. */
+export function selectLevelState(state: RoomState, actorId: string, levelId: string): RoomState {
+  assertHost(state, actorId);
+  if (state.room.status === "playing") {
+    throw new GameError("Finish this micro-round first.");
+  }
+  if (!listTinyLevels(state.room.quizId).some((level) => level.id === levelId)) {
+    throw new GameError("Unknown tiny level", 404);
+  }
+  const next = cloneState(state);
+  next.room.playlistId = "tiny";
+  next.room.levelId = levelId;
+  const questions = getPlayQuestions(next.room.quizId, next.room.variant, "tiny", levelId);
+  if (!questions.length) throw new GameError("Quiz missing.", 500);
+  next.room.status = "lobby";
+  next.room.currentQuestionIndex = 0;
+  next.room.questionEndsAt = null;
+  next.room.questionOrder = identityOrder(questions.length);
+  if (state.room.status === "finished") {
+    next.answers = [];
+    next.players = next.players.map((p) => ({ ...p, score: 0 }));
+  }
   return next;
 }
 

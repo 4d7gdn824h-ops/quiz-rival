@@ -1,7 +1,7 @@
 import { getStore } from "@/lib/game/store";
 import { jsonError } from "@/lib/game/http";
 import { toSnapshot } from "@/lib/game/snapshot";
-import type { QuizVariant } from "@/data/types";
+import type { PlaylistId, QuizVariant } from "@/data/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,12 +12,16 @@ export async function POST(request: Request) {
       name?: string;
       quizId?: string;
       variant?: QuizVariant;
+      playlistId?: PlaylistId;
+      levelId?: string | null;
     };
     const store = getStore();
     const created = await store.createRoom({
       hostName: body.name ?? "",
       quizId: body.quizId ?? "chlopi",
       variant: body.variant === "B" ? "B" : "A",
+      playlistId: body.playlistId === "tiny" ? "tiny" : undefined,
+      levelId: body.levelId ?? null,
     });
     return Response.json({
       player: created.player,

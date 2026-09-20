@@ -5,12 +5,17 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { getCatalogItem } from "@/data/catalog";
 import { QUESTION_MS, POLL_MS } from "@/lib/constants";
 import { fetchSnapshot, joinRoom, roomAction } from "@/lib/client/api";
+import {
+  markLevelCompleted,
+  readCompletedLevelIds,
+} from "@/lib/client/path-progress";
 import { readSession, writeSession } from "@/lib/client/session";
 import { questionSpeechText, type SpeechLocale } from "@/lib/client/speech";
 import type { RoomSnapshot } from "@/lib/game/types";
 import { ReadAloudButton } from "./ReadAloudButton";
 import { Scoreboard } from "./Scoreboard";
 import { TimerBar } from "./TimerBar";
+import { TinyPath } from "./TinyPath";
 
 export function RoomClient({ code }: { code: string }) {
   const [snapshot, setSnapshot] = useState<RoomSnapshot | null>(null);
@@ -22,6 +27,9 @@ export function RoomClient({ code }: { code: string }) {
   const [ready, setReady] = useState(false);
 
   const applySnap = useCallback((next: RoomSnapshot) => {
+    if (next.room.status === "finished" && next.room.quizId && next.room.levelId) {
+      markLevelCompleted(next.room.quizId, next.room.levelId);
+    }
     setSnapshot(next);
     setError(null);
   }, []);
@@ -34,8 +42,7 @@ export function RoomClient({ code }: { code: string }) {
       try {
         const snap = await fetchSnapshot(code, pid);
         if (cancelled) return;
-        setSnapshot(snap);
-        setError(null);
+        applySnap(snap);
         if (pid && snap.players.some((p) => p.id === pid)) {
           setPlayerId(pid);
           setName(session?.name ?? "");
@@ -54,7 +61,7 @@ export function RoomClient({ code }: { code: string }) {
     return () => {
       cancelled = true;
     };
-  }, [code]);
+  }, [applySnap, code]);
 
   useEffect(() => {
     if (!ready || needJoin) return;
@@ -163,6 +170,22 @@ export function RoomClient({ code }: { code: string }) {
     }
   }
 
+  const completedIds = snapshot?.room.quizId
+    ? readCompletedLevelIds(snapshot.room.quizId)
+    : [];
+
+  async function onSelectLevel(levelId: string) {
+    if (!playerId) return;
+    setBusy(true);
+    try {
+      applySnap(await roomAction(code, { action: "selectLevel", playerId, levelId }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not pick that level");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const you = snapshot?.players.find((p) => p.id === playerId);
   const isHost = you?.isHost ?? false;
   const spacedCode = useMemo(() => code.split("").join(" "), [code]);
@@ -256,14 +279,20 @@ export function RoomClient({ code }: { code: string }) {
               : "Both here. Host can start the 25s race."}
           </p>
           {snapshot.levels.length > 0 ? (
-            <p className="text-xs text-white/45">
-              Tonight: {snapshot.room.playlistId === "tiny" ? "tiny-level playlist" : "full pack"}
-              {" · "}
-              {snapshot.levels
-                .filter((level) => !level.mega)
-                .map((level) => level.title)
-                .join(" · ") || snapshot.levels[0]?.title}
-            </p>
+            <div className="space-y-2">
+              <TinyPath
+                levels={snapshot.levels.filter((level) => !level.mega)}
+                completedIds={completedIds}
+                currentId={snapshot.room.levelId ?? snapshot.room.currentLevelId}
+                disabled={busy || !isHost}
+                onSelect={isHost ? (levelId) => void onSelectLevel(levelId) : undefined}
+              />
+              <p className="text-xs text-white/45">
+                {snapshot.room.levelId
+                  ? "This room is one micro-round. Host can tap another unlocked node."
+                  : "Tap a node for a micro-round, or Start the full pack."}
+              </p>
+            </div>
           ) : null}
           {isHost ? (
             <button className="btn-primary" onClick={() => void onStart()} disabled={busy}>
@@ -330,7 +359,9 @@ export function RoomClient({ code }: { code: string }) {
           snapshot={snapshot}
           isHost={isHost}
           busy={busy}
+          completedIds={completedIds}
           onRematch={() => void onRematch()}
+          onSelectLevel={isHost ? (levelId) => void onSelectLevel(levelId) : undefined}
         />
       ) : null}
 
@@ -345,12 +376,16 @@ function WinnerPanel({
   snapshot,
   isHost,
   busy,
+  completedIds,
   onRematch,
+  onSelectLevel,
 }: {
   snapshot: RoomSnapshot;
   isHost: boolean;
   busy: boolean;
+  completedIds: readonly string[];
   onRematch: () => void;
+  onSelectLevel?: (levelId: string) => void;
 }) {
   const winners = snapshot.players.filter((p) => snapshot.winnerIds.includes(p.id));
   const tie = winners.length > 1;
@@ -374,6 +409,20 @@ function WinnerPanel({
             </li>
           ))}
       </ul>
+      {snapshot.levels.filter((level) => !level.mega).length ? (
+        <div className="space-y-2 text-left">
+          <TinyPath
+            levels={snapshot.levels.filter((level) => !level.mega)}
+            completedIds={completedIds}
+            currentId={snapshot.room.levelId ?? snapshot.room.currentLevelId}
+            disabled={busy || !isHost}
+            onSelect={onSelectLevel}
+          />
+          <p className="text-xs text-white/45">
+            That node is done. Tap the next unlocked one for the following micro-round.
+          </p>
+        </div>
+      ) : null}
       {isHost ? (
         <button className="btn-primary" onClick={onRematch} disabled={busy}>
           {busy ? "Resetting…" : "Rematch (switch A↔B + shuffle)"}

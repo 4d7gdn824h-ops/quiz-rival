@@ -1,6 +1,6 @@
-import { findLevelForQuestion, getPlaylist, listTinyLevels } from "@/data/levels";
+import { findLevelForQuestion, listTinyLevels, resolvePlayLevels } from "@/data/levels";
 import { getPack } from "@/data/quizzes";
-import type { PublicLevel } from "@/data/types";
+import type { Level, PublicLevel } from "@/data/types";
 import { DEFAULT_PLAYLIST_ID, QUESTION_SECONDS } from "@/lib/constants";
 import { getPlayQuestions } from "@/lib/levels/resolve";
 import { toPublicQuestion } from "@/lib/public-quiz";
@@ -11,7 +11,13 @@ import type { RoomSnapshot, RoomState } from "./types";
 export function toSnapshot(state: RoomState, playerId?: string): RoomSnapshot {
   const pack = getPack(state.room.quizId);
   const playlistId = state.room.playlistId ?? DEFAULT_PLAYLIST_ID;
-  const questions = getPlayQuestions(state.room.quizId, state.room.variant, playlistId);
+  const levelId = state.room.levelId ?? null;
+  const questions = getPlayQuestions(
+    state.room.quizId,
+    state.room.variant,
+    playlistId,
+    levelId,
+  );
   const realIndex = state.room.questionOrder[state.room.currentQuestionIndex];
   const current =
     state.room.status === "playing" ? questions[realIndex] : undefined;
@@ -21,10 +27,10 @@ export function toSnapshot(state: RoomState, playerId?: string): RoomSnapshot {
       ? (state.answers.find((a) => a.playerId === playerId && a.questionId === currentId)
           ?.choice ?? null)
       : null;
-  const playlist = getPlaylist(state.room.quizId, playlistId);
+  const playLevels = resolvePlayLevels(state.room.quizId, playlistId, levelId);
   const currentLevel = currentId
-    ? findLevelForQuestion(playlist, state.room.variant, currentId)
-    : playlist[0];
+    ? findLevelForQuestion(playLevels, state.room.variant, currentId)
+    : playLevels[0];
 
   return {
     store: getStore().kind,
@@ -40,9 +46,10 @@ export function toSnapshot(state: RoomState, playerId?: string): RoomSnapshot {
       questionCount: questions.length,
       questionSeconds: QUESTION_SECONDS,
       playlistId,
+      levelId,
       currentLevelId: currentLevel?.id ?? null,
     },
-    levels: toPublicLevels(state.room.quizId, state.room.variant, playlistId),
+    levels: toPublicLevels(state.room.quizId, state.room.variant),
     players: state.players.map((player) => ({
       id: player.id,
       name: player.name,
@@ -64,16 +71,16 @@ export function toSnapshot(state: RoomState, playerId?: string): RoomSnapshot {
 function toPublicLevels(
   packId: string,
   variant: RoomState["room"]["variant"],
-  playlistId: RoomState["room"]["playlistId"],
 ): PublicLevel[] {
-  const active = getPlaylist(packId, playlistId);
-  const upcoming = playlistId === "full" ? listTinyLevels(packId) : [];
-  const seen = new Set(active.map((level) => level.id));
-  return [...active, ...upcoming.filter((level) => !seen.has(level.id))].map((level) => ({
+  return listTinyLevels(packId).map((level) => toPublicLevel(level, variant));
+}
+
+function toPublicLevel(level: Level, variant: RoomState["room"]["variant"]): PublicLevel {
+  return {
     id: level.id,
     title: level.title,
     theme: level.theme,
     questionCount: level.questionIds[variant]?.length ?? 0,
     mega: level.mega,
-  }));
+  };
 }

@@ -2,6 +2,7 @@ import {
   answerState,
   joinState,
   rematchState,
+  selectLevelState,
   startState,
   tickState,
 } from "@/lib/game/engine";
@@ -41,6 +42,7 @@ export async function POST(request: Request, { params }: CodeParams) {
       choice?: string;
       switchVariant?: boolean;
       reshuffle?: boolean;
+      levelId?: string;
     };
 
     return withRoomLock(code, async () => {
@@ -92,6 +94,12 @@ export async function POST(request: Request, { params }: CodeParams) {
           switchVariant: body.switchVariant,
           reshuffle: body.reshuffle,
         });
+        await store.saveState(next);
+        return Response.json(toSnapshot(next, body.playerId));
+      }
+
+      if (body.action === "selectLevel") {
+        const next = selectLevelState(current, body.playerId, body.levelId ?? "");
         await store.saveState(next);
         return Response.json(toSnapshot(next, body.playerId));
       }

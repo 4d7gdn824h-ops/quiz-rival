@@ -15,6 +15,7 @@ interface RoomRow {
   question_ends_at: string | null;
   question_order: number[];
   playlist_id?: PlaylistId | null;
+  level_id?: string | null;
   created_at: string;
 }
 
@@ -46,6 +47,7 @@ function toRoom(row: RoomRow): Room {
       : null,
     questionOrder: row.question_order ?? [],
     playlistId: row.playlist_id === "tiny" ? "tiny" : DEFAULT_PLAYLIST_ID,
+    levelId: row.level_id ?? null,
     createdAt: new Date(row.created_at).getTime(),
   };
 }
@@ -162,6 +164,7 @@ function toRoomRow(room: Room) {
       : null,
     question_order: room.questionOrder,
     playlist_id: room.playlistId ?? DEFAULT_PLAYLIST_ID,
+    level_id: room.levelId ?? null,
     created_at: new Date(room.createdAt).toISOString(),
   };
 }
