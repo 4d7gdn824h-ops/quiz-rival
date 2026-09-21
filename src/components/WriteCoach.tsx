@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { STEPS, type Stance } from "@/data/writing-coach";
 import { CHLOPI_WRITING_CONFIG, type WritingPromptConfig } from "@/data/writing-config";
-import { fetchPublicPack } from "@/lib/client/api";
 import {
   EMPTY_DRAFT,
   readWritingDraft,
@@ -16,65 +15,37 @@ import { countWords, joinEssay } from "@/lib/writing/words";
 import { ReadAloudButton } from "./ReadAloudButton";
 import { SourceSheet } from "./SourceSheet";
 
-export function WriteCoach({ packId }: { packId?: string }) {
-  const resolvedId = packId || "chlopi";
-  const [config, setConfig] = useState<WritingPromptConfig | null>(
-    resolvedId === "chlopi" ? CHLOPI_WRITING_CONFIG : null,
-  );
-  const [draft, setDraft] = useState<WritingDraft>({ ...EMPTY_DRAFT, packId: resolvedId });
+export function WriteCoach() {
+  const [config, setConfig] = useState<WritingPromptConfig | null>(CHLOPI_WRITING_CONFIG);
+  const [draft, setDraft] = useState<WritingDraft>({ ...EMPTY_DRAFT, packId: "chlopi" });
   const [copied, setCopied] = useState(false);
   const [showParent, setShowParent] = useState(false);
   const [showSource, setShowSource] = useState(false);
   const [hintStep, setHintStep] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    if (resolvedId === "chlopi") {
-      void Promise.resolve().then(() => {
-        if (cancelled) return;
-        setConfig(CHLOPI_WRITING_CONFIG);
-        const saved = readWritingDraft("chlopi");
-        if (saved) setDraft(saved);
-      });
-      return () => {
-        cancelled = true;
-      };
-    }
-    void fetchPublicPack(resolvedId)
-      .then((pack) => {
-        if (cancelled) return;
-        if (!pack.writing) {
-          setLoadError("This pack has no essay prompt. Scan a worksheet that asks for a longer answer.");
-          return;
-        }
-        setConfig(pack.writing);
-        const saved = readWritingDraft(resolvedId);
-        setDraft(saved ?? { ...EMPTY_DRAFT, packId: resolvedId });
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setLoadError(err instanceof Error ? err.message : "Could not load that prompt");
-        }
-      });
+    void Promise.resolve().then(() => {
+      if (cancelled) return;
+      setConfig(CHLOPI_WRITING_CONFIG);
+      const saved = readWritingDraft("chlopi");
+      if (saved) setDraft(saved);
+    });
     return () => {
       cancelled = true;
     };
-  }, [resolvedId]);
+  }, []);
 
-  const update = useCallback(
-    (patch: Partial<WritingDraft>) => {
-      setDraft((prev) => {
-        const next = { ...prev, ...patch, packId: resolvedId };
-        writeWritingDraft(next);
-        return next;
-      });
-      setCopied(false);
-      setError(null);
-    },
-    [resolvedId],
-  );
+  const update = useCallback((patch: Partial<WritingDraft>) => {
+    setDraft((prev) => {
+      const next = { ...prev, ...patch, packId: "chlopi" };
+      writeWritingDraft(next);
+      return next;
+    });
+    setCopied(false);
+    setError(null);
+  }, []);
 
   const openSource = useCallback(() => {
     cancelSpeech();
@@ -121,22 +92,6 @@ export function WriteCoach({ packId }: { packId?: string }) {
     } catch {
       setError("Nie udało się skopiować — zaznacz tekst ręcznie.");
     }
-  }
-
-  if (loadError) {
-    return (
-      <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-4 py-10">
-        <p className="rounded-2xl bg-red-500/15 px-4 py-3 text-red-200" role="alert">
-          {loadError}
-        </p>
-        <Link className="btn-secondary text-center" href="/write">
-          Open Chłopi coach
-        </Link>
-        <Link className="text-center text-sm text-white/50 underline" href="/">
-          Home
-        </Link>
-      </main>
-    );
   }
 
   if (!config) {
