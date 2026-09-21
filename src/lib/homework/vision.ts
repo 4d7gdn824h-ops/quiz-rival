@@ -10,13 +10,14 @@ import "server-only";
  */
 
 import type { ExtractedNotes, HomeworkMode } from "./types";
-import { asLines, getFixtureNotes } from "./fixture";
+import { asLines } from "./lines";
+import { detectLanguage, normalizeQuizLanguage } from "./language";
 
 const EXTRACT_INSTRUCTIONS = `You extract a child's homework worksheet for a parent-supervised quiz app.
 Return ONLY JSON with this shape:
 {
   "title": string,
-  "language": "pl" or "en",
+  "language": "BCP-47 or ISO 639 code for the worksheet (e.g. pl, en, es, fr, de, uk). Never translate. Never coerce to pl or en if the page is another language.",
   "topics": string[],
   "facts": string[],
   "essayPrompts": string[],
@@ -26,9 +27,9 @@ Return ONLY JSON with this shape:
 Rules:
 - Help kids practice. Do NOT solve the worksheet. Do NOT write essay answers.
 - facts[] are study notes from the page (true statements, terms, names) — not the answer key to exercises when that would do the work for them.
-- essayPrompts[] only if the page asks for a longer written answer / pytanie problemowe / wypracowanie.
+- essayPrompts[] only if the page asks for a longer written answer / pytanie problemowe / wypracowanie / essai / redacción.
 - Mark header junk (name, class, school, signature, page numbers) as junk: true.
-- Keep the original language of the worksheet in title, topics, facts, prompts, rawText.`;
+- Keep the original language of the worksheet in title, topics, facts, prompts, rawText, lines.`;
 
 export async function extractWithVision(input: {
   bytes: Buffer;
@@ -160,8 +161,7 @@ function notesFromModelText(text: string): ExtractedNotes {
     rawText?: string;
     lines?: { text?: string; junk?: boolean }[];
   };
-  const fallback = getFixtureNotes();
-  const rawText = String(parsed.rawText || "").trim() || fallback.rawText;
+  const rawText = String(parsed.rawText || "").trim();
   const lines =
     Array.isArray(parsed.lines) && parsed.lines.length
       ? parsed.lines
@@ -171,21 +171,23 @@ function notesFromModelText(text: string): ExtractedNotes {
             keep: !line.junk,
           }))
           .filter((line) => line.text)
-      : asLines(rawText, fallback.lines);
-  const language = parsed.language === "en" ? "en" : "pl";
+      : asLines(rawText);
   const topics = stringList(parsed.topics);
   const facts = stringList(parsed.facts);
   const essayPrompts = stringList(parsed.essayPrompts);
-  if (!topics.length && !facts.length && !rawText) {
+  const blob = `${parsed.title ?? ""}\n${topics.join(" ")}\n${facts.join(" ")}\n${rawText}`;
+  const language = normalizeQuizLanguage(parsed.language, detectLanguage(blob));
+  if (!topics.length && !facts.length && !rawText && !lines.length) {
     throw new Error("Vision model returned empty notes");
   }
+  const kept = lines.filter((line) => line.keep).map((line) => line.text);
   return {
     title: String(parsed.title || "").trim() || "Tonight's homework",
     language,
-    topics: topics.length ? topics : fallback.topics.slice(0, 3),
-    facts: facts.length ? facts : topics,
+    topics: topics.length ? topics : kept.slice(0, 5),
+    facts: facts.length ? facts : topics.length ? topics : kept.slice(0, 8),
     essayPrompts,
-    rawText,
+    rawText: rawText || kept.join("\n"),
     lines,
   };
 }

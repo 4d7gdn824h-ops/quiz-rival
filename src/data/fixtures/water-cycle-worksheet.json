@@ -1,0 +1,31 @@
+{
+  "id": "water-cycle-worksheet",
+  "title": "Water cycle — science sheet",
+  "language": "en",
+  "topics": [
+    "Evaporation",
+    "Condensation",
+    "Precipitation",
+    "The cycle repeats"
+  ],
+  "facts": [
+    "Water evaporates from oceans, lakes, and puddles when the sun heats it.",
+    "Warm water vapor rises, cools, and condenses into tiny droplets that make clouds.",
+    "Precipitation is rain, snow, sleet, or hail falling from clouds.",
+    "The water cycle has no beginning or end — water keeps moving through earth, air, and sky."
+  ],
+  "essayPrompts": [],
+  "rawText": "Name: _______________  Class: 5\nSchool: ................................\nScience worksheet · water cycle\n1. Water evaporates from oceans, lakes, and puddles when the sun heats it.\n2. Warm water vapor rises, cools, and condenses into tiny droplets that make clouds.\n3. Precipitation is rain, snow, sleet, or hail falling from clouds.\n4. The water cycle has no beginning or end — water keeps moving through earth, air, and sky.\nLabel the diagram: evaporation, condensation, precipitation.\nParent signature: __________\nPage 1 / 1",
+  "lines": [
+    { "id": "l1", "text": "Name: _______________  Class: 5", "keep": false },
+    { "id": "l2", "text": "School: ................................", "keep": false },
+    { "id": "l3", "text": "Science worksheet · water cycle", "keep": true },
+    { "id": "l4", "text": "1. Water evaporates from oceans, lakes, and puddles when the sun heats it.", "keep": true },
+    { "id": "l5", "text": "2. Warm water vapor rises, cools, and condenses into tiny droplets that make clouds.", "keep": true },
+    { "id": "l6", "text": "3. Precipitation is rain, snow, sleet, or hail falling from clouds.", "keep": true },
+    { "id": "l7", "text": "4. The water cycle has no beginning or end — water keeps moving through earth, air, and sky.", "keep": true },
+    { "id": "l8", "text": "Label the diagram: evaporation, condensation, precipitation.", "keep": true },
+    { "id": "l9", "text": "Parent signature: __________", "keep": false },
+    { "id": "l10", "text": "Page 1 / 1", "keep": false }
+  ]
+}

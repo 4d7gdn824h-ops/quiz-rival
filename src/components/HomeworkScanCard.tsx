@@ -1,15 +1,18 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { HOMEWORK_FIXTURES } from "@/data/fixtures/catalog";
 
 export function HomeworkScanCard({
   busy,
   onFile,
   onDemo,
+  onPasteDemo,
 }: {
   busy: boolean;
   onFile: (file: File) => void;
-  onDemo: () => void;
+  onDemo: (fixtureId: string) => void;
+  onPasteDemo?: () => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -37,7 +40,7 @@ export function HomeworkScanCard({
       <input
         ref={fileRef}
         type="file"
-        accept="image/*,application/pdf"
+        accept="image/*,application/pdf,.svg,.txt"
         className="sr-only"
         onChange={(event) => {
           take(event.target.files?.[0]);
@@ -93,15 +96,39 @@ export function HomeworkScanCard({
         >
           Camera
         </button>
-        <button type="button" className="btn-secondary" disabled={busy} onClick={onDemo}>
-          Demo worksheet
+        <button
+          type="button"
+          className="btn-secondary"
+          disabled={busy || !onPasteDemo}
+          onClick={() => onPasteDemo?.()}
+        >
+          Paste lines
         </button>
       </div>
+
+      <div className="space-y-2">
+        <p className="text-xs uppercase tracking-[0.18em] text-white/45">Demo worksheets</p>
+        <div className="flex flex-wrap gap-2">
+          {HOMEWORK_FIXTURES.map((fixture) => (
+            <button
+              key={fixture.id}
+              type="button"
+              className="rounded-full bg-white/10 px-3 py-2 text-sm font-semibold text-white/80 disabled:opacity-50"
+              disabled={busy}
+              onClick={() => onDemo(fixture.id)}
+            >
+              {fixture.title}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {filename && !busy ? (
         <p className="text-xs text-white/45">Selected: {filename}</p>
       ) : (
         <p className="text-xs text-white/45">
-          No keys on this path. Demo uses the hardcoded Chłopi fixture when no API key is set.
+          Without a vision key, a photo is not treated as Chłopi — paste the page or pick a demo.
+          With a key, any language on the page is kept.
         </p>
       )}
     </section>

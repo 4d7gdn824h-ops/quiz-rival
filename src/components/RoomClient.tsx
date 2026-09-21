@@ -9,7 +9,7 @@ import {
   readCompletedLevelIds,
 } from "@/lib/client/path-progress";
 import { readSession, writeSession } from "@/lib/client/session";
-import { questionSpeechText, type SpeechLocale } from "@/lib/client/speech";
+import { questionSpeechText, readAloudIdleLabel } from "@/lib/client/speech";
 import type { RoomSnapshot } from "@/lib/game/types";
 import { ReadAloudButton } from "./ReadAloudButton";
 import { Scoreboard, seatYouVsThem } from "./Scoreboard";
@@ -191,8 +191,7 @@ export function RoomClient({ code }: { code: string }) {
   const currentLevelTitle = snapshot?.levels.find(
     (level) => level.id === snapshot.room.currentLevelId && !level.mega,
   )?.title;
-  const packLang: SpeechLocale =
-    snapshot?.room.language === "en" ? "en" : "pl";
+  const packLang = snapshot?.room.language || "pl";
 
   if (!ready) {
     return (
@@ -319,7 +318,7 @@ export function RoomClient({ code }: { code: string }) {
             <ReadAloudButton
               text={questionSpeechText(snapshot.currentQuestion)}
               lang={packLang}
-              idleLabel={packLang === "en" ? "Read" : "Czytaj"}
+              idleLabel={readAloudIdleLabel(packLang)}
               className="btn-read w-full"
             />
           </article>

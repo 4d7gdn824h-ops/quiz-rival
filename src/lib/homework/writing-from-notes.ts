@@ -1,4 +1,5 @@
 import { CHLOPI_WRITING_CONFIG, type WritingPromptConfig, type WritingTheme } from "@/data/writing-config";
+import { isPolish } from "./language";
 import type { ExtractedNotes } from "./types";
 
 const GENERIC_STANCES_PL = CHLOPI_WRITING_CONFIG.stances.map((stance) => {
@@ -20,6 +21,31 @@ const GENERIC_STANCES_PL = CHLOPI_WRITING_CONFIG.stances.map((stance) => {
     ...stance,
     tip: "Bezpieczna teza: coś wraca, ale w innej formie. Nazwij, co zostało, a co się zmieniło.",
     thesisHint: "Częściowo: motyw z karty wraca dzisiaj, ale w innej postaci.",
+  };
+});
+
+const GENERIC_STANCES_EN = CHLOPI_WRITING_CONFIG.stances.map((stance) => {
+  if (stance.id === "tak") {
+    return {
+      ...stance,
+      label: "Yes",
+      tip: "Strong thesis: you agree. Name a worksheet theme and one example from your own life.",
+      thesisHint: "I think yes — it shows up in the worksheet and in life today.",
+    };
+  }
+  if (stance.id === "nie") {
+    return {
+      ...stance,
+      label: "No",
+      tip: "Bolder thesis: show how today is different, and still give a real example.",
+      thesisHint: "I think the answer is no, because the world of the worksheet has changed.",
+    };
+  }
+  return {
+    ...stance,
+    label: "Partly",
+    tip: "Safe thesis: something returns in another form. Name what stayed and what changed.",
+    thesisHint: "Partly: a theme from the sheet comes back today, but in a different shape.",
   };
 });
 
@@ -50,10 +76,10 @@ export function writingFromNotes(packId: string, notes: ExtractedNotes): Writing
     });
   }
 
-  const pl = notes.language !== "en";
+  const pl = isPolish(notes.language);
   return {
     id: packId,
-    language: notes.language,
+    language: notes.language || (pl ? "pl" : "en"),
     kicker: pl ? "Kartkówka · na dziś" : "Tonight's prompt",
     title: pl ? "Napisz wypracowanie" : "Write the response",
     blurb: pl
@@ -83,7 +109,7 @@ export function writingFromNotes(packId: string, notes: ExtractedNotes): Writing
     closingHint: pl
       ? "Na końcu jedno zdanie z wnioskiem — własnymi słowami."
       : "Close with one sentence that is a conclusion in your own words.",
-    stances: GENERIC_STANCES_PL,
+    stances: pl ? GENERIC_STANCES_PL : GENERIC_STANCES_EN,
     themes,
     parentNotesEn: [
       "Do not write the essay for them. Check a clear stance, a worksheet theme, and one example in their own words.",

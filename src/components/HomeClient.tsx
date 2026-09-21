@@ -131,7 +131,12 @@ export function HomeClient({ initialPackId }: { initialPackId?: string }) {
     }
   }
 
-  async function runExtract(input: { file?: File; fixtureId?: string; forceFixture?: boolean }) {
+  async function runExtract(input: {
+    file?: File;
+    fixtureId?: string;
+    forceFixture?: boolean;
+    pasteDemo?: boolean;
+  }) {
     setError(null);
     setBusy("extract");
     try {
@@ -251,7 +256,8 @@ export function HomeClient({ initialPackId }: { initialPackId?: string }) {
       <HomeworkScanCard
         busy={busy === "extract"}
         onFile={(file) => void runExtract({ file })}
-        onDemo={() => void runExtract({ fixtureId: "chlopi-worksheet", forceFixture: true })}
+        onDemo={(fixtureId) => void runExtract({ fixtureId })}
+        onPasteDemo={() => void runExtract({ pasteDemo: true })}
       />
 
       <Link

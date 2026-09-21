@@ -208,7 +208,7 @@ export function WriteCoach() {
       {step < 5 ? (
         <ReadAloudButton
           text={spokenText}
-          lang={config.language === "en" ? "en" : "pl"}
+          lang={config.language}
           idleLabel="Na głos"
           className="btn-read w-full"
         />
@@ -620,7 +620,7 @@ function FinalStep({
       </p>
       <ReadAloudButton
         text={assembled || "Brak tekstu — wróć do kroku Pisz."}
-        lang={config.language === "en" ? "en" : "pl"}
+        lang={config.language}
         idleLabel="Na głos"
         className="btn-read w-full"
       />

@@ -1,4 +1,6 @@
-export type SpeechLocale = "pl" | "en";
+import { primaryLang } from "@/lib/homework/language";
+
+export type SpeechLocale = string;
 
 export function speechSupported(): boolean {
   return (
@@ -8,15 +10,55 @@ export function speechSupported(): boolean {
   );
 }
 
+const LOCALE_TAGS: Record<string, string> = {
+  pl: "pl-PL",
+  en: "en-US",
+  es: "es-ES",
+  fr: "fr-FR",
+  de: "de-DE",
+  it: "it-IT",
+  pt: "pt-PT",
+  uk: "uk-UA",
+  ru: "ru-RU",
+  nl: "nl-NL",
+  cs: "cs-CZ",
+  sk: "sk-SK",
+  sv: "sv-SE",
+  no: "nb-NO",
+  da: "da-DK",
+  fi: "fi-FI",
+  hu: "hu-HU",
+  ro: "ro-RO",
+  el: "el-GR",
+  tr: "tr-TR",
+  ar: "ar-SA",
+  he: "he-IL",
+  hi: "hi-IN",
+  zh: "zh-CN",
+  ja: "ja-JP",
+  ko: "ko-KR",
+};
+
 export function localeTag(lang: SpeechLocale): string {
-  return lang === "pl" ? "pl-PL" : "en-US";
+  const trimmed = String(lang || "").trim();
+  if (!trimmed || trimmed === "und") return "en-US";
+  if (trimmed.includes("-")) return trimmed;
+  return LOCALE_TAGS[primaryLang(trimmed)] ?? trimmed;
+}
+
+export function readAloudIdleLabel(lang: SpeechLocale): string {
+  return primaryLang(lang) === "pl" ? "Czytaj" : "Read";
 }
 
 export function pickVoice(
   voices: SpeechSynthesisVoice[],
   lang: SpeechLocale,
 ): SpeechSynthesisVoice | undefined {
-  const wanted = lang === "pl" ? ["pl-pl", "pl"] : ["en-us", "en-gb", "en"];
+  const tag = localeTag(lang).replaceAll("_", "-").toLowerCase();
+  const primary = primaryLang(lang);
+  const wanted = [tag, primary, primary === "en" ? "en-us" : "", primary === "en" ? "en-gb" : ""].filter(
+    Boolean,
+  );
   const list = voices.map((voice) => ({
     voice,
     tag: voice.lang.replaceAll("_", "-").toLowerCase(),
