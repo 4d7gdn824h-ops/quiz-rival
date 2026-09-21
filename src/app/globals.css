@@ -50,6 +50,36 @@ body {
   padding: 0.8rem 1rem;
 }
 
+.scan-drop {
+  display: flex;
+  min-height: 8.5rem;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1.25rem;
+  border: 2px dashed rgba(190, 255, 120, 0.45);
+  background: rgba(190, 255, 120, 0.06);
+  color: inherit;
+  padding: 1.25rem 1rem;
+  text-align: center;
+}
+
+.scan-drop.is-over {
+  border-color: #beff78;
+  background: rgba(190, 255, 120, 0.16);
+}
+
+.scan-drop.is-reading {
+  border-style: solid;
+  border-color: #beff78;
+  background: rgba(190, 255, 120, 0.12);
+}
+
+.scan-drop:disabled {
+  opacity: 1;
+}
+
 .field {
   width: 100%;
   border-radius: 1rem;

@@ -149,16 +149,9 @@ export function HomeClient({ initialPackId }: { initialPackId?: string }) {
     }
   }
 
-  const writeHref = selected?.hasEssay
-    ? selected.generated
-      ? `/write?pack=${selected.id}`
-      : "/write"
-    : "/write";
-  const writeKicker = selected?.generated && selected.hasEssay ? "Tonight’s prompt" : "Kartkówka · 26 września";
-  const writeBlurb =
-    selected?.generated && selected.hasEssay
-      ? "Write essay · prompt from the scan · scaffold only"
-      : "Write essay · pytanie problemowe · ~100 słów";
+  const writeHref = "/write";
+  const writeKicker = "Kartkówka · 26 września";
+  const writeBlurb = "Write essay · pytanie problemowe · ~100 słów";
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 px-4 py-6">
@@ -256,7 +249,7 @@ export function HomeClient({ initialPackId }: { initialPackId?: string }) {
       </form>
 
       <HomeworkScanCard
-        busy={busy !== null}
+        busy={busy === "extract"}
         onFile={(file) => void runExtract({ file })}
         onDemo={() => void runExtract({ fixtureId: "chlopi-worksheet", forceFixture: true })}
       />
