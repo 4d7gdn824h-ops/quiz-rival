@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PACK_CATALOG } from "@/data/catalog";
 import { getPack } from "@/data/quizzes";
 import type { QuizVariant } from "@/data/types";
+import { listPublicCatalog } from "@/lib/packs/public-catalog";
 
 export default async function ParentKeyPage({
   searchParams,
@@ -9,13 +10,15 @@ export default async function ParentKeyPage({
   searchParams: Promise<{ pack?: string; variant?: string }>;
 }) {
   const query = await searchParams;
-  const packId = query.pack ?? "chlopi";
+  const catalog = listPublicCatalog();
+  const packId = query.pack ?? catalog.find((item) => item.tonight)?.id ?? "chlopi";
   const variant = (query.variant === "B" ? "B" : "A") as QuizVariant;
   const pack = getPack(packId) ?? getPack("chlopi");
   if (!pack) {
     return <p className="p-6">Pack not found.</p>;
   }
   const questions = pack.variants[variant];
+  const navItems = catalog.length ? catalog : PACK_CATALOG;
 
   return (
     <main className="mx-auto w-full max-w-lg space-y-6 px-4 py-8">
@@ -24,11 +27,12 @@ export default async function ParentKeyPage({
       </p>
       <h1 className="font-display text-4xl">Answer key</h1>
       <p className="text-white/70">
-        English hints for supervising a Polish quiz. This page is not linked from
-        student play screens.
+        English hints for supervising a quiz. This page is not linked from student play
+        screens. Generated packs live in this server process (same as rooms) — regenerate if
+        the demo server restarted.
       </p>
       <nav className="flex flex-wrap gap-2">
-        {PACK_CATALOG.map((item) => (
+        {navItems.map((item) => (
           <Link
             key={item.id}
             href={`/parent/key?pack=${item.id}&variant=${variant}`}

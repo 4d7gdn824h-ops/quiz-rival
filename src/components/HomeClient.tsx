@@ -6,36 +6,65 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { PACK_CATALOG } from "@/data/catalog";
 import { listTinyLevels } from "@/data/levels";
 import type { PublicLevel, QuizVariant } from "@/data/types";
-import { createRoom, joinRoom } from "@/lib/client/api";
+import { createRoom, extractHomeworkRequest, fetchPackCatalog, joinRoom } from "@/lib/client/api";
+import {
+  writeHomeworkDraft,
+  readTonightPackId,
+} from "@/lib/client/homework-draft";
 import { readCompletedLevelIds } from "@/lib/client/path-progress";
 import { writeSession } from "@/lib/client/session";
+import type { PublicHomeworkPack } from "@/lib/homework/types";
 import { normalizeRoomCode } from "@/lib/ids";
+import { toPublicLevel } from "@/lib/public-quiz";
+import { HomeworkScanCard } from "./HomeworkScanCard";
 import { TinyPath } from "./TinyPath";
 
-export function HomeClient() {
+function asClientPack(item: (typeof PACK_CATALOG)[number]): PublicHomeworkPack {
+  return {
+    ...item,
+    generated: false,
+    tonight: false,
+    hasEssay: item.id === "chlopi",
+    levels: listTinyLevels(item.id).map((level) => toPublicLevel(level, "A")),
+  };
+}
+
+export function HomeClient({ initialPackId }: { initialPackId?: string }) {
   const router = useRouter();
   const [name, setName] = useState("");
-  const [quizId, setQuizId] = useState(PACK_CATALOG[0]?.id ?? "chlopi");
+  const [packs, setPacks] = useState<PublicHomeworkPack[]>(() => PACK_CATALOG.map(asClientPack));
+  const [quizId, setQuizId] = useState(initialPackId || PACK_CATALOG[0]?.id || "chlopi");
   const [variant, setVariant] = useState<QuizVariant>("A");
   const [joinCode, setJoinCode] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState<"create" | "join" | null>(null);
+  const [busy, setBusy] = useState<"create" | "join" | "extract" | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchPackCatalog()
+      .then(({ packs: next }) => {
+        if (cancelled) return;
+        setPacks(next);
+        const tonight = next.find((pack) => pack.tonight)?.id ?? readTonightPackId();
+        const preferred = initialPackId || tonight;
+        if (preferred && next.some((pack) => pack.id === preferred)) {
+          setQuizId(preferred);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [initialPackId]);
 
   const selected = useMemo(
-    () => PACK_CATALOG.find((pack) => pack.id === quizId),
-    [quizId],
+    () => packs.find((pack) => pack.id === quizId) ?? packs[0],
+    [packs, quizId],
   );
 
   const pathLevels = useMemo<PublicLevel[]>(
-    () =>
-      listTinyLevels(quizId).map((level) => ({
-        id: level.id,
-        title: level.title,
-        theme: level.theme,
-        questionCount: level.questionIds[variant]?.length ?? 0,
-        mega: level.mega,
-      })),
-    [quizId, variant],
+    () => selected?.levels?.filter((level) => !level.mega) ?? [],
+    [selected],
   );
 
   const [completedIds, setCompletedIds] = useState<string[]>([]);
@@ -102,6 +131,35 @@ export function HomeClient() {
     }
   }
 
+  async function runExtract(input: { file?: File; fixtureId?: string; forceFixture?: boolean }) {
+    setError(null);
+    setBusy("extract");
+    try {
+      const result = await extractHomeworkRequest(input);
+      writeHomeworkDraft({
+        extractId: result.id,
+        notes: result.notes,
+        mode: result.mode,
+        notice: result.notice,
+      });
+      router.push("/homework");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not read that scan");
+      setBusy(null);
+    }
+  }
+
+  const writeHref = selected?.hasEssay
+    ? selected.generated
+      ? `/write?pack=${selected.id}`
+      : "/write"
+    : "/write";
+  const writeKicker = selected?.generated && selected.hasEssay ? "Tonight’s prompt" : "Kartkówka · 26 września";
+  const writeBlurb =
+    selected?.generated && selected.hasEssay
+      ? "Write essay · prompt from the scan · scaffold only"
+      : "Write essay · pytanie problemowe · ~100 słów";
+
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 px-4 py-6">
       <header className="space-y-1.5 text-center">
@@ -139,7 +197,7 @@ export function HomeClient() {
         <fieldset className="space-y-2">
           <legend className="text-sm font-medium text-white/80">Quiz pack</legend>
           <div className="grid gap-2">
-            {PACK_CATALOG.map((pack) => (
+            {packs.map((pack) => (
               <label
                 key={pack.id}
                 className={`choice ${quizId === pack.id ? "choice-on" : ""}`}
@@ -152,7 +210,14 @@ export function HomeClient() {
                   onChange={() => setQuizId(pack.id)}
                   className="sr-only"
                 />
-                <span className="block font-semibold">{pack.title}</span>
+                <span className="block font-semibold">
+                  {pack.title}
+                  {pack.tonight ? (
+                    <span className="ml-2 rounded-full bg-lime-300 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-black">
+                      Tonight
+                    </span>
+                  ) : null}
+                </span>
                 <span className="block text-sm text-white/60">{pack.blurb}</span>
               </label>
             ))}
@@ -190,18 +255,22 @@ export function HomeClient() {
         </p>
       </form>
 
+      <HomeworkScanCard
+        busy={busy !== null}
+        onFile={(file) => void runExtract({ file })}
+        onDemo={() => void runExtract({ fixtureId: "chlopi-worksheet", forceFixture: true })}
+      />
+
       <Link
-        href="/write"
+        href={writeHref}
         className="card card-quiet flex items-center justify-between gap-3 no-underline"
       >
         <span className="min-w-0 space-y-0.5">
           <span className="block text-[0.7rem] font-semibold uppercase tracking-[0.22em] text-orange-300">
-            Kartkówka · 26 września
+            {writeKicker}
           </span>
           <h2 className="font-display text-xl leading-tight">Napisz wypracowanie</h2>
-          <span className="block text-xs text-white/55">
-            Write essay · pytanie problemowe · ~100 słów
-          </span>
+          <span className="block text-xs text-white/55">{writeBlurb}</span>
         </span>
         <span className="shrink-0 text-white/40" aria-hidden="true">
           →
@@ -256,7 +325,10 @@ export function HomeClient() {
 
       <p className="pb-6 text-center text-sm text-white/45">
         Parent?{" "}
-        <a className="underline decoration-white/30 underline-offset-4" href="/parent/key">
+        <a
+          className="underline decoration-white/30 underline-offset-4"
+          href={`/parent/key${selected ? `?pack=${selected.id}&variant=${variant}` : ""}`}
+        >
           Answer key + English hints
         </a>
         <span className="block pt-1">Never shown on student play screens.</span>

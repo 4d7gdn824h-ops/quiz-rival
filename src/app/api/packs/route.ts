@@ -1,18 +1,16 @@
-import { PACK_CATALOG } from "@/data/catalog";
-import { getStore } from "@/lib/game/store";
-import { homeworkMode } from "@/lib/homework/mode";
 import { listPublicCatalog } from "@/lib/packs/public-catalog";
+import { homeworkMode } from "@/lib/homework/mode";
 import { assertNoQuizSecrets } from "@/lib/public-quiz";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function GET() {
+  const packs = listPublicCatalog();
   const payload = {
-    packs: listPublicCatalog(),
-    builtIn: PACK_CATALOG,
-    store: getStore().kind,
+    packs,
     homeworkMode: homeworkMode(),
   };
-  assertNoQuizSecrets(payload.packs, "packs");
+  assertNoQuizSecrets(payload, "packs");
   return Response.json(payload);
 }

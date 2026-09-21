@@ -1,23 +1,16 @@
 "use client";
 
 import { useEffect, useId, useRef } from "react";
-import {
-  SOURCE_BYLINE,
-  SOURCE_FACTS,
-  SOURCE_INTRO,
-  SOURCE_KICKER,
-  SOURCE_PROMPT,
-  SOURCE_SECTIONS,
-  SOURCE_TITLE,
-  SOURCE_USE,
-} from "@/data/chlopi-source";
+import type { WritingSource } from "@/data/writing-config";
 
 type Props = {
   open: boolean;
   onClose: () => void;
+  source: WritingSource;
+  prompt: string;
 };
 
-export function ChlopiSourceSheet({ open, onClose }: Props) {
+export function SourceSheet({ open, onClose, source, prompt }: Props) {
   const titleId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
   const restoreRef = useRef<HTMLElement | null>(null);
@@ -60,12 +53,12 @@ export function ChlopiSourceSheet({ open, onClose }: Props) {
           <div className="flex items-start justify-between gap-3">
             <header className="space-y-1">
               <p className="text-xs font-semibold uppercase tracking-[0.28em] text-lime-300">
-                {SOURCE_KICKER}
+                {source.kicker}
               </p>
               <h2 id={titleId} className="font-display text-3xl leading-tight">
-                {SOURCE_TITLE}
+                {source.title}
               </h2>
-              <p className="text-sm text-white/60">{SOURCE_BYLINE}</p>
+              <p className="text-sm text-white/60">{source.byline}</p>
             </header>
             <button
               ref={closeRef}
@@ -77,36 +70,40 @@ export function ChlopiSourceSheet({ open, onClose }: Props) {
             </button>
           </div>
 
-          <p className="text-sm leading-relaxed text-white/75">{SOURCE_INTRO}</p>
+          <p className="text-sm leading-relaxed text-white/75">{source.intro}</p>
 
           <section className="card space-y-2">
             <h3 className="text-sm font-semibold text-white/55">Pytanie problemowe</h3>
-            <p className="text-[1.02rem] leading-relaxed text-white/90">{SOURCE_PROMPT}</p>
+            <p className="text-[1.02rem] leading-relaxed text-white/90">{prompt}</p>
           </section>
 
-          <section className="space-y-2">
-            <h3 className="font-display text-xl">Lektura w skrócie</h3>
-            <ul className="list-disc space-y-2 pl-5 text-sm leading-relaxed text-white/80">
-              {SOURCE_FACTS.map((fact) => (
-                <li key={fact}>{fact}</li>
+          {source.facts.length ? (
+            <section className="space-y-2">
+              <h3 className="font-display text-xl">Lektura w skrócie</h3>
+              <ul className="list-disc space-y-2 pl-5 text-sm leading-relaxed text-white/80">
+                {source.facts.map((fact) => (
+                  <li key={fact}>{fact}</li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          {source.sections.length ? (
+            <section className="space-y-3">
+              <h3 className="font-display text-xl">Wątki</h3>
+              {source.sections.map((section) => (
+                <article key={section.id} className="card space-y-1.5">
+                  <h4 className="font-semibold text-lime-200">{section.title}</h4>
+                  <p className="text-sm leading-relaxed text-white/80">{section.body}</p>
+                </article>
               ))}
-            </ul>
-          </section>
-
-          <section className="space-y-3">
-            <h3 className="font-display text-xl">Wątki z powieści</h3>
-            {SOURCE_SECTIONS.map((section) => (
-              <article key={section.id} className="card space-y-1.5">
-                <h4 className="font-semibold text-lime-200">{section.title}</h4>
-                <p className="text-sm leading-relaxed text-white/80">{section.body}</p>
-              </article>
-            ))}
-          </section>
+            </section>
+          ) : null}
 
           <section className="space-y-2">
             <h3 className="font-display text-xl">Jak korzystać</h3>
             <ul className="list-disc space-y-2 pl-5 text-sm leading-relaxed text-white/70">
-              {SOURCE_USE.map((item) => (
+              {source.use.map((item) => (
                 <li key={item}>{item}</li>
               ))}
             </ul>

@@ -1,0 +1,44 @@
+{
+  "id": "chlopi-worksheet",
+  "title": "Chłopi — karta pracy (Klasa 8)",
+  "language": "pl",
+  "topics": [
+    "Lektura i fakty",
+    "Jagna i presja społeczna",
+    "Wykluczenie odmieńców",
+    "Boryna i Antek — majątek",
+    "Aktualność problematyki"
+  ],
+  "facts": [
+    "Autorem powieści Chłopi jest Władysław Reymont.",
+    "Akcja toczy się głównie we wsi Lipce.",
+    "Maciej Boryna należy do ważniejszych, zamożniejszych gospodarzy: ziemia, status i autorytet we wsi.",
+    "Jagna doświadcza presji społecznej: wieś ją ocenia i plotkuje.",
+    "Motyw wykluczenia odmieńców pokazuje, że społeczność odrzuca osoby łamiące lokalne normy.",
+    "Konflikt Boryny z Antkiem dotyczy ziemi, dziedziczenia i władzy ojca, często także Jagny.",
+    "Pytanie problemowe pyta, czy te motywy są aktualne dziś — trzeba podać przykład ze współczesności."
+  ],
+  "essayPrompts": [
+    "Czy problematyka ukazana w „Chłopach” (np. presja społeczna, wykluczenie odmieńców, konflikty pokoleniowe o majątek) jest aktualna w dzisiejszych czasach? Uzasadnij swoją odpowiedź w dłuższej wypowiedzi, podając przynajmniej jeden przykład ze współczesności."
+  ],
+  "rawText": "Imię i nazwisko: _______________  Klasa: 8\nSzkoła: ................................\nKarta pracy · język polski · termin 26 września\nLektura: Władysław Reymont, Chłopi (wieś Lipce).\n1. Autorem powieści jest Władysław Reymont.\n2. Akcja toczy się głównie we wsi Lipce.\n3. Maciej Boryna: ziemia, status, autorytet we wsi.\n4. Jagna — presja społeczna, ocena i plotka wsi.\n5. Wykluczenie odmieńców: społeczność odcina osoby poza normą.\n6. Boryna i Antek: spór o ziemię, dziedziczenie, władzę ojca, Jagny.\nPytanie problemowe (~100 słów):\nCzy problematyka ukazana w „Chłopach” (np. presja społeczna, wykluczenie odmieńców, konflikty pokoleniowe o majątek) jest aktualna w dzisiejszych czasach? Uzasadnij swoją odpowiedź w dłuższej wypowiedzi, podając przynajmniej jeden przykład ze współczesności.\nPodpis rodzica: __________\nStrona 1 / 1",
+  "lines": [
+    { "id": "l1", "text": "Imię i nazwisko: _______________  Klasa: 8", "keep": false },
+    { "id": "l2", "text": "Szkoła: ................................", "keep": false },
+    { "id": "l3", "text": "Karta pracy · język polski · termin 26 września", "keep": true },
+    { "id": "l4", "text": "Lektura: Władysław Reymont, Chłopi (wieś Lipce).", "keep": true },
+    { "id": "l5", "text": "1. Autorem powieści jest Władysław Reymont.", "keep": true },
+    { "id": "l6", "text": "2. Akcja toczy się głównie we wsi Lipce.", "keep": true },
+    { "id": "l7", "text": "3. Maciej Boryna: ziemia, status, autorytet we wsi.", "keep": true },
+    { "id": "l8", "text": "4. Jagna — presja społeczna, ocena i plotka wsi.", "keep": true },
+    { "id": "l9", "text": "5. Wykluczenie odmieńców: społeczność odcina osoby poza normą.", "keep": true },
+    { "id": "l10", "text": "6. Boryna i Antek: spór o ziemię, dziedziczenie, władzę ojca, Jagny.", "keep": true },
+    {
+      "id": "l11",
+      "text": "Pytanie problemowe (~100 słów): Czy problematyka ukazana w „Chłopach” (np. presja społeczna, wykluczenie odmieńców, konflikty pokoleniowe o majątek) jest aktualna w dzisiejszych czasach? Uzasadnij swoją odpowiedź w dłuższej wypowiedzi, podając przynajmniej jeden przykład ze współczesności.",
+      "keep": true
+    },
+    { "id": "l12", "text": "Podpis rodzica: __________", "keep": false },
+    { "id": "l13", "text": "Strona 1 / 1", "keep": false }
+  ]
+}

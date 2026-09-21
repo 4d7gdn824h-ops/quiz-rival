@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { getCatalogItem } from "@/data/catalog";
 import { QUESTION_MS, POLL_MS } from "@/lib/constants";
 import { fetchSnapshot, joinRoom, roomAction } from "@/lib/client/api";
 import {
@@ -193,7 +192,7 @@ export function RoomClient({ code }: { code: string }) {
     (level) => level.id === snapshot.room.currentLevelId && !level.mega,
   )?.title;
   const packLang: SpeechLocale =
-    getCatalogItem(snapshot?.room.quizId ?? "")?.language === "en" ? "en" : "pl";
+    snapshot?.room.language === "en" ? "en" : "pl";
 
   if (!ready) {
     return (

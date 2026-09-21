@@ -10,3 +10,5 @@ export const ALL_ANSWERED_HOLD_MS = 1200;
 /** Create-room default stays the 8-question mega-level. Path nodes use `tiny` + `levelId`. */
 export const DEFAULT_PLAYLIST_ID = "full" as const;
 export const PATH_PROGRESS_KEY = "quizrival-path-progress";
+export const HOMEWORK_NOTES_KEY = "quizrival-homework-notes";
+export const TONIGHT_PACK_KEY = "quizrival-tonight-pack";

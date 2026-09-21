@@ -1,4 +1,10 @@
-import type { PlaylistId, PublicLevel, PublicQuestion, QuizVariant } from "@/data/types";
+import type {
+  PlaylistId,
+  PublicLevel,
+  PublicQuestion,
+  QuizLanguage,
+  QuizVariant,
+} from "@/data/types";
 
 export type RoomStatus = "lobby" | "playing" | "finished";
 
@@ -53,6 +59,7 @@ export interface RoomSnapshot {
     status: RoomStatus;
     quizId: string;
     quizTitle: string;
+    language: QuizLanguage;
     variant: QuizVariant;
     hostId: string;
     currentQuestionIndex: number;
