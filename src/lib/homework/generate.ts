@@ -87,7 +87,7 @@ function cloneChlopiPack(id: string, notes: ExtractedNotes) {
 
   const pack: QuizPackFile = {
     id,
-    title: `Tonight · ${notes.title}`,
+    title: notes.title,
     language: "pl",
     source: "Homework scan · Chłopi fixture",
     variants: {
@@ -194,7 +194,7 @@ function buildDeterministicPack(id: string, notes: ExtractedNotes) {
 
   const pack: QuizPackFile = {
     id,
-    title: `Tonight · ${notes.title}`,
+    title: notes.title,
     language,
     source: "Homework scan",
     variants: { A: questionsA, B: questionsB },
@@ -328,7 +328,7 @@ Kept text: ${notes.rawText.slice(0, 4000)}`;
 
   const pack: QuizPackFile = {
     id,
-    title: `Tonight · ${String(parsed.title || notes.title).trim()}`,
+    title: String(parsed.title || notes.title).trim() || notes.title,
     language,
     source: "Homework scan · LLM",
     variants: { A: questionsA, B: questionsB },
