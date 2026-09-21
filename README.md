@@ -2,7 +2,7 @@
 
 Working name (easy to rename). Tagline: **two kids, one quiz, timer, winner.**
 
-Week-1 MVP: a **sibling live challenge** with hardcoded quiz packs. No auth, Stripe, uploads, PDF, or paid voice APIs.
+Sibling live challenge with hardcoded demo packs **plus** a homework-scan path: photograph tonight’s worksheet, confirm the notes, generate a rivalry pack. No auth or Stripe.
 
 ## Run locally
 
@@ -15,24 +15,59 @@ Two phones on the same Wi-Fi, or **two browser windows** (even in one profile). 
 
 ## Create / Join flow
 
-1. **Create room (host)** — enter a display name, pick a pack (`Chłopi (PL)` or `Warm-up (EN)`), pick variant **A** or **B**, tap **Create room**. You get a **4-letter code**.
+1. **Create room (host)** — enter a display name, pick a pack (`Chłopi (PL)`, `Warm-up (EN)`, or **Tonight’s pack** after a scan), pick variant **A** or **B**, tap **Create room**. You get a **4-letter code**.
 2. **Join room** — sibling enters the same name field + the 4-letter code, tap **Join room**.
 3. Host taps **Start**. Every question has a shared **25 second** countdown (`QUESTION_SECONDS` in `src/lib/constants.ts`).
 4. Each device answers independently. The live scoreboard updates; student screens never show keys or English parent hints.
 5. After the last question: **winner screen**. Host taps **Rematch** (same room, switches A↔B and reshuffles).
 6. Parents can open `/parent/key` (also linked from the host winner screen) for keys + English hints.
 
+## Homework scan (scan → play)
+
+Create room stays the first-fold CTA. Directly under it: a **Photo/PDF drop zone**.
+
+Flow: **Photo/PDF → “Reading…” → confirm topics → Generate tiny path → Create room / Rematch**.
+
+1. Drop or pick a photo/PDF (or **Demo worksheet** for the hardcoded Chłopi fixture). The card shows **Reading…** then opens Confirm. No keys on this path.
+2. Confirm is a **checklist** of detected topics and notes. Uncheck junk (name blanks, signatures, answers you don’t want quizzed). Primary CTA: **Generate tiny path**.
+3. The new pack uses the **same TinyPath** component as built-in Chłopi — home, lobby, rematch. Host picks Tonight’s pack + A/B and Create/Join as usual.
+
+Student APIs (`/api/rooms`, `/api/packs`, generate/extract responses) **strip** `correctOptionId` / `parentHint`. Keys exist only on `/parent/key`.
+
+Writing-coach generalization (essay wizard for a scanned prompt) is deferred; `/write` remains the hardcoded Chłopi scaffold.
+
+### Fixture mode (no API key)
+
+If `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` are unset, extract does **not** call a model. It loads the Chłopi demo worksheet:
+
+- Notes: `src/data/fixtures/chlopi-worksheet.json`
+- Preview image: `public/fixtures/chlopi-worksheet.svg` (and `.png`) — open `/fixtures/chlopi-worksheet.svg` in the browser
+- Home / `/homework` → **Demo worksheet** → confirm checklist → **Generate tiny path** → **Create room**
+
+Generate in fixture mode clones the built-in Chłopi questions into a new pack id so the demo is high quality without keys.
+
+### With a vision key
+
+Copy `.env.example` to `.env.local` and set **one** of:
+
+```bash
+OPENAI_API_KEY=sk-...          # preferred when set (images). gpt-4o-mini by default
+ANTHROPIC_API_KEY=sk-ant-...   # used if OpenAI is unset; required for PDF document blocks
+```
+
+Restart `npm run dev`. Photos go through vision and return structured notes. PDFs: Anthropic document blocks (OpenAI vision here is images-only — photograph the page or set the Anthropic key). After confirm, generate asks the same provider for a 3–5 level MC pack; if that call fails it falls back to a deterministic pack from the kept facts.
+
+`GET /api/homework/status` reports `{ mode: "openai" | "anthropic" | "fixture" }`.
+
+Generated packs live in the same Node process as in-memory rooms (about 6 hours). `npm run dev` restart clears them — scan again.
+
 ## Writing coach (`/write`)
 
-Homework helper for the Klasa 8 *Chłopi* problem question (~100 words), due 26 September 2026.
-
-- Home page: secondary **Napisz wypracowanie** / Write essay card (Create room is the first-fold CTA)
-- Student UI is Polish. Step wizard: question → Tak/Nie/Częściowo → 1–3 themes → her own modern example → sentence boxes (thesis / book link / example / close) with a live word counter → assembled text + **Kopiuj**
-- Does **not** dump a finished essay. **Podpowiedź** reveals one sample sentence to adapt
-- Parent English coaching notes are hidden until **Pokaż wskazówki dla rodzica (EN)**
-- Persistent **Czytaj** (header) opens the *Chłopi* source sheet/overlay: problem question, short lektura facts, and the three motifs (Jagna / wykluczenie / Boryna–Antek). Dismiss (**Zamknij**, backdrop, Escape) returns to the **same step** with the draft intact. Motif notes only — no model essay, no quiz keys.
-- **Na głos** (browser Web Speech API, `speechSynthesis`) is the secondary read-aloud: current step, revealed **Podpowiedź** tips, or the assembled final paragraph. Tap **Stop** to cancel. Prefers a `pl-PL` voice; no API keys. If the browser has no speech synthesis, a one-line notice is shown instead.
-- No quiz answer keys on this page
+Scaffold for the Klasa 8 *Chłopi* problem question (~100 words). **No auto-full-essay button.** A later slice can load a scanned essay prompt into this same wizard.
+- **Podpowiedź** still reveals one sample sentence to adapt
+- Parent English notes stay behind **Pokaż wskazówki dla rodzica (EN)**
+- Persistent **Czytaj** opens the source sheet for the active prompt (Chłopi motifs, or scan facts/topics). Dismiss returns to the same step with the draft intact
+- **Na głos** is still browser `speechSynthesis` (no paid TTS)
 
 ## Quiz play UX
 
@@ -45,7 +80,7 @@ Short-answer worksheet items were converted to multiple choice so auto-score is 
 `npm run dev` works **without** any cloud keys.
 
 - **Default:** in-memory room store in the Next.js server + polling (~450ms) and Server-Sent Events. Two phones talking to the **same** `npm run dev` process can play. Two tabs in one browser work the same way.
-- **Limitation:** the memory store lives in one Node process. It will not sync across multiple serverless instances (typical production host).
+- **Limitation:** the memory store lives in one Node process. It will not sync across multiple serverless instances (typical production host). Homework packs share that limitation.
 
 ### Plug in Supabase
 
@@ -65,20 +100,20 @@ Game logic (scoring, hiding keys) always runs on the server. Clients only receiv
 ## Scripts
 
 ```bash
-npm run dev     # demo immediately
+npm run dev     # demo immediately (fixture homework scan works)
 npm run build   # production build
 npm start       # serve the build
 ```
 
 ## Tiny levels path
 
-**Chłopi** is a 5-node linear path (lektura → Jagna → wykluczenie → Boryna–Antek → teza). **Warm-up (EN)** has a shorter path (places / science / school bits). Variant B is the rematch wording (same level ids).
+**Chłopi** is a 5-node linear path (lektura → Jagna → wykluczenie → Boryna–Antek → teza). **Warm-up (EN)** has a shorter path (places / science / school bits). A generated Tonight pack has 3–5 nodes from approved topics. Variant B is the rematch wording (same level ids).
 
 - Home (pack selected) and lobby show tappable nodes. Node 1 starts unlocked. Finishing node N unlocks N+1. Already-unlocked nodes stay free to replay.
-- Tap a node → room uses `playlistId: "tiny"` plus that `levelId`, so the race is **that micro-round only** (existing `Level` / `getPlayQuestions` seam). Create room without a node still starts the full 8-question pack.
+- Tap a node → room uses `playlistId: "tiny"` plus that `levelId`, so the race is **that micro-round only** (existing `Level` / `getPlayQuestions` seam). Create room without a node still starts the full pack.
 - Unlock progress is stored on the device (`quizrival-path-progress`). Both siblings play the same selected node; rivalry strip and live scoring are unchanged.
 - **No** skill tree, streaks, hearts, or cosmetics.
 
 ## Out of scope (intentionally)
 
-Auth, Stripe, file upload / vision, PDF print, paid/cloud TTS (ElevenLabs etc.), STT, Google OAuth, XP shop, stranger matchmaking, chat, streaks, hearts, skill-tree cosmetics.
+Auth, Stripe, PDF print, paid/cloud TTS (ElevenLabs etc.), STT, Google OAuth, XP shop, stranger matchmaking, chat, streaks, hearts, skill-tree cosmetics.

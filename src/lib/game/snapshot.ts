@@ -1,9 +1,12 @@
-import { findLevelForQuestion, listTinyLevels, resolvePlayLevels } from "@/data/levels";
 import { getPack } from "@/data/quizzes";
-import type { Level, PublicLevel } from "@/data/types";
 import { DEFAULT_PLAYLIST_ID, QUESTION_SECONDS } from "@/lib/constants";
 import { getPlayQuestions } from "@/lib/levels/resolve";
-import { toPublicQuestion } from "@/lib/public-quiz";
+import {
+  findLevelForQuestion,
+  listTinyLevels,
+  resolvePlayLevels,
+} from "@/lib/packs/levels";
+import { assertNoQuizSecrets, toPublicLevel, toPublicQuestion } from "@/lib/public-quiz";
 import { winnerIds } from "./engine";
 import { getStore } from "./store";
 import type { RoomSnapshot, RoomState } from "./types";
@@ -32,13 +35,14 @@ export function toSnapshot(state: RoomState, playerId?: string): RoomSnapshot {
     ? findLevelForQuestion(playLevels, state.room.variant, currentId)
     : playLevels[0];
 
-  return {
+  const snapshot: RoomSnapshot = {
     store: getStore().kind,
     room: {
       code: state.room.code,
       status: state.room.status,
       quizId: state.room.quizId,
       quizTitle: pack?.title ?? state.room.quizId,
+      language: pack?.language ?? "pl",
       variant: state.room.variant,
       hostId: state.room.hostId,
       currentQuestionIndex: state.room.currentQuestionIndex,
@@ -49,7 +53,9 @@ export function toSnapshot(state: RoomState, playerId?: string): RoomSnapshot {
       levelId,
       currentLevelId: currentLevel?.id ?? null,
     },
-    levels: toPublicLevels(state.room.quizId, state.room.variant),
+    levels: listTinyLevels(state.room.quizId).map((level) =>
+      toPublicLevel(level, state.room.variant),
+    ),
     players: state.players.map((player) => ({
       id: player.id,
       name: player.name,
@@ -66,21 +72,7 @@ export function toSnapshot(state: RoomState, playerId?: string): RoomSnapshot {
     yourAnswer,
     winnerIds: winnerIds(state),
   };
-}
-
-function toPublicLevels(
-  packId: string,
-  variant: RoomState["room"]["variant"],
-): PublicLevel[] {
-  return listTinyLevels(packId).map((level) => toPublicLevel(level, variant));
-}
-
-function toPublicLevel(level: Level, variant: RoomState["room"]["variant"]): PublicLevel {
-  return {
-    id: level.id,
-    title: level.title,
-    theme: level.theme,
-    questionCount: level.questionIds[variant]?.length ?? 0,
-    mega: level.mega,
-  };
+  assertNoQuizSecrets(snapshot.currentQuestion, "currentQuestion");
+  assertNoQuizSecrets(snapshot.levels, "levels");
+  return snapshot;
 }

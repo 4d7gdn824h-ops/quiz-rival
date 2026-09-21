@@ -1,9 +1,10 @@
-import type { Stance, ThemeOption } from "@/data/writing-coach";
+import type { Stance } from "@/data/writing-coach";
 
 export interface WritingDraft {
+  packId: string;
   step: number;
   stance: Stance | null;
-  themes: ThemeOption["id"][];
+  themes: string[];
   example: string;
   thesis: string;
   themeLinks: string;
@@ -12,6 +13,7 @@ export interface WritingDraft {
 }
 
 export const EMPTY_DRAFT: WritingDraft = {
+  packId: "chlopi",
   step: 0,
   stance: null,
   themes: [],
@@ -22,25 +24,30 @@ export const EMPTY_DRAFT: WritingDraft = {
   closing: "",
 };
 
-const KEY = "quizrival-chlopi-essay-draft";
+const keyFor = (packId: string) => `quizrival-essay-draft:${packId}`;
+const LEGACY_KEY = "quizrival-chlopi-essay-draft";
 
-export function readWritingDraft(): WritingDraft | null {
+export function readWritingDraft(packId = "chlopi"): WritingDraft | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = sessionStorage.getItem(KEY);
+    const raw =
+      sessionStorage.getItem(keyFor(packId)) ??
+      (packId === "chlopi" ? sessionStorage.getItem(LEGACY_KEY) : null);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as WritingDraft;
     if (typeof parsed.step !== "number") return null;
-    return { ...EMPTY_DRAFT, ...parsed };
+    return { ...EMPTY_DRAFT, ...parsed, packId };
   } catch {
     return null;
   }
 }
 
 export function writeWritingDraft(draft: WritingDraft) {
-  sessionStorage.setItem(KEY, JSON.stringify(draft));
+  const packId = draft.packId || "chlopi";
+  sessionStorage.setItem(keyFor(packId), JSON.stringify(draft));
 }
 
-export function clearWritingDraft() {
-  sessionStorage.removeItem(KEY);
+export function clearWritingDraft(packId = "chlopi") {
+  sessionStorage.removeItem(keyFor(packId));
+  if (packId === "chlopi") sessionStorage.removeItem(LEGACY_KEY);
 }

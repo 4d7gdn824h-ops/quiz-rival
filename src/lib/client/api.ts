@@ -1,5 +1,6 @@
 import type { PlaylistId, QuizVariant } from "@/data/types";
 import type { RoomSnapshot } from "@/lib/game/types";
+import type { ExtractedNotes, HomeworkMode, PublicHomeworkPack, PublicPackDetail } from "@/lib/homework/types";
 
 async function parse<T>(res: Response): Promise<T> {
   const data = (await res.json().catch(() => ({}))) as T & { error?: string };
@@ -65,6 +66,62 @@ export async function roomAction(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
+    }),
+  );
+}
+
+export async function fetchPackCatalog() {
+  return parse<{ packs: PublicHomeworkPack[]; homeworkMode: HomeworkMode }>(
+    await fetch("/api/packs", { cache: "no-store" }),
+  );
+}
+
+export async function fetchPublicPack(id: string) {
+  return parse<PublicPackDetail>(
+    await fetch(`/api/packs/${encodeURIComponent(id)}`, { cache: "no-store" }),
+  );
+}
+
+export async function extractHomeworkRequest(input: {
+  file?: File | null;
+  fixtureId?: string;
+  forceFixture?: boolean;
+}) {
+  if (input.file) {
+    const form = new FormData();
+    form.append("file", input.file);
+    if (input.forceFixture) form.append("forceFixture", "1");
+    if (input.fixtureId) form.append("fixtureId", input.fixtureId);
+    return parse<{
+      id: string;
+      mode: HomeworkMode;
+      notice: string | null;
+      notes: ExtractedNotes;
+    }>(await fetch("/api/homework/extract", { method: "POST", body: form }));
+  }
+  return parse<{
+    id: string;
+    mode: HomeworkMode;
+    notice: string | null;
+    notes: ExtractedNotes;
+  }>(
+    await fetch("/api/homework/extract", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fixtureId: input.fixtureId,
+        forceFixture: input.forceFixture ?? Boolean(input.fixtureId),
+      }),
+    }),
+  );
+}
+
+export async function generateHomeworkRequest(notes: ExtractedNotes) {
+  return parse<{ mode: HomeworkMode; pack: PublicHomeworkPack }>(
+    await fetch("/api/homework/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ notes }),
     }),
   );
 }

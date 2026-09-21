@@ -1,5 +1,5 @@
 import { getQuestions } from "@/data/quizzes";
-import { flattenLevelQuestionIds, resolvePlayLevels } from "@/data/levels";
+import { flattenLevelQuestionIds, resolvePlayLevels } from "@/lib/packs/levels";
 import type { Level, PlaylistId, QuizQuestion, QuizVariant } from "@/data/types";
 import type { Answer } from "@/lib/game/types";
 

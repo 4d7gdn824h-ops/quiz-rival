@@ -1,5 +1,6 @@
 import "server-only";
 
+import { getGeneratedPack } from "@/lib/homework/registry";
 import type { QuizPackFile, QuizQuestion, QuizVariant } from "./types";
 import chlopi from "./chlopi.json";
 import warmupEn from "./warmup-en.json";
@@ -14,7 +15,7 @@ export function listPacks(): QuizPackFile[] {
 }
 
 export function getPack(quizId: string): QuizPackFile | undefined {
-  return PACKS.find((pack) => pack.id === quizId);
+  return PACKS.find((pack) => pack.id === quizId) ?? getGeneratedPack(quizId)?.pack;
 }
 
 export function getQuestions(

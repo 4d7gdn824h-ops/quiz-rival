@@ -1,4 +1,4 @@
-import { getLevel, listTinyLevels } from "@/data/levels";
+import { getLevel, listTinyLevels } from "@/lib/packs/levels";
 import type { PlaylistId, QuizVariant } from "@/data/types";
 import {
   ALL_ANSWERED_HOLD_MS,

@@ -7,10 +7,11 @@ export const TARGET_WORDS_MAX = 120;
 export type Stance = "tak" | "nie" | "czesciowo";
 
 export interface ThemeOption {
-  id: "presja" | "wykluczenie" | "majatek";
+  id: string;
   label: string;
   hint: string;
   parentNote: string;
+  sampleSentence?: string;
 }
 
 export const STANCES: {
@@ -63,7 +64,7 @@ export const THEMES: ThemeOption[] = [
   },
 ];
 
-export const THEME_SENTENCES: Record<ThemeOption["id"], string> = {
+export const THEME_SENTENCES: Record<"presja" | "wykluczenie" | "majatek", string> = {
   presja:
     "Jagna doświadcza presji społecznej: wieś ją ocenia, plotkuje i nie zostawia jej spokoju.",
   wykluczenie:

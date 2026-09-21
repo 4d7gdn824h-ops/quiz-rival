@@ -42,6 +42,14 @@ export interface PackCatalogItem {
   questionCount: number;
   blurb: string;
   levelCount: number;
+  /** True for packs generated from a homework scan (not the built-in demos). */
+  generated?: boolean;
+  /** Most recently generated scan — host should pick this in Create room. */
+  tonight?: boolean;
+  /** Writing coach can load an essay/problem prompt for this pack. */
+  hasEssay?: boolean;
+  /** Client-safe tiny-path nodes (no keys). */
+  levels?: PublicLevel[];
 }
 
 /**
