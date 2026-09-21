@@ -1,0 +1,30 @@
+{
+  "id": "planetas-worksheet",
+  "title": "Los planetas — ficha de ciencias",
+  "language": "es",
+  "topics": [
+    "El sistema solar",
+    "Planetas rocosos",
+    "Planetas gigantes",
+    "Saturno y sus anillos"
+  ],
+  "facts": [
+    "El sistema solar tiene ocho planetas que giran alrededor del Sol.",
+    "Mercurio, Venus, la Tierra y Marte son planetas rocosos.",
+    "Júpiter es el planeta más grande del sistema solar.",
+    "Saturno es conocido por sus anillos de hielo y polvo."
+  ],
+  "essayPrompts": [],
+  "rawText": "Nombre: _______________  Clase: 5\nEscuela: ................................\nFicha de ciencias · los planetas\n1. El sistema solar tiene ocho planetas que giran alrededor del Sol.\n2. Mercurio, Venus, la Tierra y Marte son planetas rocosos.\n3. Júpiter es el planeta más grande del sistema solar.\n4. Saturno es conocido por sus anillos de hielo y polvo.\nFirma del padre o la madre: __________\nPágina 1 / 1",
+  "lines": [
+    { "id": "l1", "text": "Nombre: _______________  Clase: 5", "keep": false },
+    { "id": "l2", "text": "Escuela: ................................", "keep": false },
+    { "id": "l3", "text": "Ficha de ciencias · los planetas", "keep": true },
+    { "id": "l4", "text": "1. El sistema solar tiene ocho planetas que giran alrededor del Sol.", "keep": true },
+    { "id": "l5", "text": "2. Mercurio, Venus, la Tierra y Marte son planetas rocosos.", "keep": true },
+    { "id": "l6", "text": "3. Júpiter es el planeta más grande del sistema solar.", "keep": true },
+    { "id": "l7", "text": "4. Saturno es conocido por sus anillos de hielo y polvo.", "keep": true },
+    { "id": "l8", "text": "Firma del padre o la madre: __________", "keep": false },
+    { "id": "l9", "text": "Página 1 / 1", "keep": false }
+  ]
+}

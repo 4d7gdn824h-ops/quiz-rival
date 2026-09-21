@@ -9,6 +9,7 @@ import {
   writeHomeworkDraft,
   writeTonightPackId,
 } from "@/lib/client/homework-draft";
+import { looksLikeJunk, notesFromRawText } from "@/lib/homework/lines";
 import type { ExtractedNotes, HomeworkMode } from "@/lib/homework/types";
 import type { PublicLevel } from "@/data/types";
 import { HomeworkScanCard } from "./HomeworkScanCard";
@@ -52,7 +53,12 @@ export function HomeworkClient() {
     });
   }
 
-  async function runExtract(input: { file?: File; fixtureId?: string; forceFixture?: boolean }) {
+  async function runExtract(input: {
+    file?: File;
+    fixtureId?: string;
+    forceFixture?: boolean;
+    pasteDemo?: boolean;
+  }) {
     setBusy("extract");
     setError(null);
     setPackId(null);
@@ -118,7 +124,8 @@ export function HomeworkClient() {
         <HomeworkScanCard
           busy={busy === "extract"}
           onFile={(file) => void runExtract({ file })}
-          onDemo={() => void runExtract({ fixtureId: "chlopi-worksheet", forceFixture: true })}
+          onDemo={(fixtureId) => void runExtract({ fixtureId })}
+          onPasteDemo={() => void runExtract({ pasteDemo: true })}
         />
       ) : null}
 
@@ -191,6 +198,10 @@ function ConfirmForm({
   onGenerate: (kept: ExtractedNotes) => void;
 }) {
   const [title, setTitle] = useState(notes.title);
+  const [language, setLanguage] = useState(notes.language || "und");
+  const [paste, setPaste] = useState(
+    notes.rawText || notes.lines.map((line) => line.text).join("\n"),
+  );
   const [topics, setTopics] = useState(() => toChecks(notes.topics, "topic"));
   const [questions, setQuestions] = useState(() =>
     toChecks(notes.facts.length ? notes.facts : keptLineTexts(notes), "q"),
@@ -199,6 +210,20 @@ function ConfirmForm({
 
   const keptTopics = topics.filter((item) => item.keep).length;
   const keptQuestions = questions.filter((item) => item.keep).length;
+  const needsPaste = keptTopics === 0 && keptQuestions === 0 && !lines.some((line) => line.keep);
+
+  function applyPasted() {
+    const next = notesFromRawText(paste, {
+      title: title.trim() || undefined,
+      language: language && language !== "und" ? language : undefined,
+    });
+    setLanguage(next.language);
+    if (!title.trim()) setTitle(next.title);
+    setLines(next.lines);
+    setTopics(toChecks(next.topics.length ? next.topics : next.facts, "topic"));
+    setQuestions(toChecks(next.facts.length ? next.facts : keptLineTexts(next), "q"));
+    setPaste(next.rawText);
+  }
 
   function submit() {
     const keptTopicsText = topics.filter((item) => item.keep).map((item) => item.text.trim()).filter(Boolean);
@@ -206,13 +231,12 @@ function ConfirmForm({
     onGenerate({
       ...notes,
       title: title.trim() || notes.title,
+      language: language.trim() || notes.language,
       topics: keptTopicsText,
       facts: keptFacts,
       lines,
-      rawText: lines
-        .filter((line) => line.keep)
-        .map((line) => line.text)
-        .join("\n"),
+      rawText:
+        lines.filter((line) => line.keep).map((line) => line.text).join("\n") || paste,
     });
   }
 
@@ -222,7 +246,7 @@ function ConfirmForm({
         <p className="rounded-2xl bg-white/8 px-4 py-3 text-sm text-white/70">{notice}</p>
       ) : null}
       <p className="text-xs uppercase tracking-[0.18em] text-white/45">
-        {mode ?? "fixture"} · uncheck junk · no keys shown
+        {mode ?? "fixture"} · {language} · uncheck junk · no keys shown
       </p>
 
       <label className="block space-y-2">
@@ -232,6 +256,40 @@ function ConfirmForm({
           value={title}
           onChange={(event) => setTitle(event.target.value)}
         />
+      </label>
+
+      <label className="block space-y-2">
+        <span className="text-sm font-medium text-white/80">Worksheet language</span>
+        <input
+          className="field"
+          value={language}
+          onChange={(event) => setLanguage(event.target.value)}
+          placeholder="pl, en, es, fr…"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+        />
+        <span className="block text-xs text-white/45">
+          BCP-47 / ISO code. Content stays in this language — we do not force Polish or English.
+        </span>
+      </label>
+
+      <label className="block space-y-2">
+        <span className="text-sm font-medium text-white/80">Paste / edit worksheet text</span>
+        <textarea
+          className="field min-h-36"
+          value={paste}
+          onChange={(event) => setPaste(event.target.value)}
+          placeholder="Paste the page in any language. Uncheck junk after applying."
+        />
+        <button
+          type="button"
+          className="btn-secondary"
+          disabled={busy || !paste.trim()}
+          onClick={applyPasted}
+        >
+          Use this text
+        </button>
       </label>
 
       <Checklist
@@ -258,7 +316,7 @@ function ConfirmForm({
         }
       />
 
-      {lines.some((line) => looksLikeJunkLine(line.text)) ? (
+      {lines.some((line) => looksLikeJunk(line.text)) ? (
         <Checklist
           legend="Page lines"
           hint="Junk (name, signature, page) starts unchecked."
@@ -269,6 +327,12 @@ function ConfirmForm({
             )
           }
         />
+      ) : null}
+
+      {needsPaste ? (
+        <p className="text-sm text-orange-100">
+          Paste a few study lines above, then Generate. We will not invent Chłopi for an empty page.
+        </p>
       ) : null}
 
       <button
@@ -334,8 +398,4 @@ function toChecks(values: string[], prefix: string) {
 
 function keptLineTexts(notes: ExtractedNotes) {
   return notes.lines.filter((line) => line.keep).map((line) => line.text);
-}
-
-function looksLikeJunkLine(text: string) {
-  return /imię|imie|nazwisko|szkoła|szkola|podpis|strona\s+\d+|page\s+\d+|_{3,}/i.test(text);
 }

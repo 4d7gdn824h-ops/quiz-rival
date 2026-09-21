@@ -1,12 +1,18 @@
+import { HOMEWORK_FIXTURES, getFixtureMeta } from "@/data/fixtures/catalog";
 import chlopiFixture from "@/data/fixtures/chlopi-worksheet.json";
-import type { ExtractedNotes, ExtractLine } from "./types";
+import planetasFixture from "@/data/fixtures/planetas-worksheet.json";
+import waterCycleFixture from "@/data/fixtures/water-cycle-worksheet.json";
+import type { ExtractedNotes } from "./types";
+
+export { HOMEWORK_FIXTURES, getFixtureMeta } from "@/data/fixtures/catalog";
+export { asLines, looksLikeJunk, notesFromRawText, emptyPasteNotes } from "./lines";
 
 export const CHLOPI_FIXTURE_ID = "chlopi-worksheet";
 
 type FixtureFile = {
   id: string;
   title: string;
-  language: "pl" | "en";
+  language: string;
   topics: string[];
   facts: string[];
   essayPrompts: string[];
@@ -14,17 +20,25 @@ type FixtureFile = {
   lines: { id: string; text: string; keep: boolean }[];
 };
 
-const CHLOPI = chlopiFixture as FixtureFile;
+const FILES: Record<string, FixtureFile> = {
+  "chlopi-worksheet": chlopiFixture as FixtureFile,
+  "water-cycle-worksheet": waterCycleFixture as FixtureFile,
+  "planetas-worksheet": planetasFixture as FixtureFile,
+};
 
 export function listFixtureIds() {
-  return [CHLOPI_FIXTURE_ID];
+  return HOMEWORK_FIXTURES.map((item) => item.id);
 }
 
 export function getFixtureNotes(id = CHLOPI_FIXTURE_ID): ExtractedNotes {
-  const file = id === CHLOPI_FIXTURE_ID ? CHLOPI : CHLOPI;
+  const file = FILES[id];
+  if (!file) {
+    throw new Error(`Unknown demo worksheet: ${id}`);
+  }
+  const meta = getFixtureMeta(file.id);
   return {
     title: file.title,
-    language: file.language,
+    language: file.language || meta?.language || "und",
     topics: [...file.topics],
     facts: [...file.facts],
     essayPrompts: [...file.essayPrompts],
@@ -55,27 +69,4 @@ export function notesFromKeptLines(notes: ExtractedNotes): ExtractedNotes {
     essayPrompts: notes.essayPrompts.map((prompt) => prompt.trim()).filter(Boolean),
     lines: notes.lines.map((line) => ({ ...line, text: line.text.trim() })),
   };
-}
-
-export function asLines(rawText: string, fallback: ExtractLine[] = []): ExtractLine[] {
-  const rows = rawText
-    .split(/\r?\n/)
-    .map((text) => text.trim())
-    .filter(Boolean);
-  if (!rows.length) return fallback;
-  return rows.map((text, index) => ({
-    id: `line-${index + 1}`,
-    text,
-    keep: !looksLikeJunk(text),
-  }));
-}
-
-export function looksLikeJunk(text: string) {
-  const value = text.trim();
-  if (!value) return true;
-  if (/^(imię|imie|nazwisko|szkoła|szkola|klasa|data|podpis)/i.test(value)) return true;
-  if (/_{3,}|x{3,}|\.{4,}/i.test(value) && value.length < 48) return true;
-  if (/^strona\s+\d+/i.test(value)) return true;
-  if (/^page\s+\d+/i.test(value)) return true;
-  return false;
 }

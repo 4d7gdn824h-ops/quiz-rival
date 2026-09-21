@@ -28,9 +28,9 @@ Create room stays the first-fold CTA. Directly under it: a **Photo/PDF drop zone
 
 Flow: **Photo/PDF → “Reading…” → confirm topics → Generate tiny path → Create room / Rematch**.
 
-1. Drop or pick a photo/PDF (or **Demo worksheet** for the hardcoded Chłopi fixture). The card shows **Reading…** then opens Confirm. No keys on this path.
-2. Confirm is a **checklist** of detected topics and notes. Uncheck junk (name blanks, signatures, answers you don’t want quizzed). Primary CTA: **Generate tiny path**.
-3. The new pack uses the **same TinyPath** component as built-in Chłopi — home, lobby, rematch. Host picks Tonight’s pack + A/B and Create/Join as usual.
+1. Drop or pick a photo/PDF, **Paste lines**, or a **demo worksheet** (Chłopi PL, Water cycle EN, Los planetas ES). The card shows **Reading…** then opens Confirm. No keys on this path.
+2. Confirm is a **checklist** of detected topics and notes. Uncheck junk (name blanks, signatures, answers you don’t want quizzed). You can also paste/edit the page text and set the worksheet language (BCP-47 / ISO, not limited to pl/en). Primary CTA: **Generate tiny path**.
+3. The new pack uses the **same TinyPath** component as built-in Chłopi — home, lobby, rematch. Host picks Tonight’s pack + A/B and Create/Join as usual. Quiz content stays in the homework language.
 
 Student APIs (`/api/rooms`, `/api/packs`, generate/extract responses) **strip** `correctOptionId` / `parentHint`. Keys exist only on `/parent/key`.
 
@@ -38,13 +38,21 @@ Writing-coach generalization (essay wizard for a scanned prompt) is deferred; `/
 
 ### Fixture mode (no API key)
 
-If `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` are unset, extract does **not** call a model. It loads the Chłopi demo worksheet:
+If `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` are unset, extract does **not** call a model and does **not** pretend every upload is Chłopi.
 
-- Notes: `src/data/fixtures/chlopi-worksheet.json`
-- Preview image: `public/fixtures/chlopi-worksheet.svg` (and `.png`) — open `/fixtures/chlopi-worksheet.svg` in the browser
-- Home / `/homework` → **Demo worksheet** → confirm checklist → **Generate tiny path** → **Create room**
+**Without a key — prove any topic / any language:**
 
-Generate in fixture mode clones the built-in Chłopi questions into a new pack id so the demo is high quality without keys.
+1. Home or `/homework` → pick a demo: **Chłopi (PL)**, **Water cycle (EN)**, or **Los planetas (ES)** → confirm checklist → **Generate tiny path** → **Create room**.
+2. Or **Paste lines** (or drop a `.txt` / `.svg` / text PDF) → edit the page in any language → **Use this text** → generate. A photo without a key opens the same paste editor with a notice; it is not replaced by the Chłopi fixture.
+3. Generate builds a deterministic 3–5 node TinyPath from the confirmed topics/facts, with stems in pl / en / es / fr when we know the language (other languages keep the original notes and use English stems).
+
+Fixtures:
+
+- `src/data/fixtures/chlopi-worksheet.json` + `public/fixtures/chlopi-worksheet.svg`
+- `src/data/fixtures/water-cycle-worksheet.json` + `public/fixtures/water-cycle-worksheet.svg`
+- `src/data/fixtures/planetas-worksheet.json` + `public/fixtures/planetas-worksheet.svg`
+
+Chłopi generate still clones the built-in high-quality pack when the confirmed notes actually are that worksheet.
 
 ### With a vision key
 
@@ -55,9 +63,9 @@ OPENAI_API_KEY=sk-...          # preferred when set (images). gpt-4o-mini by def
 ANTHROPIC_API_KEY=sk-ant-...   # used if OpenAI is unset; required for PDF document blocks
 ```
 
-Restart `npm run dev`. Photos go through vision and return structured notes. PDFs: Anthropic document blocks (OpenAI vision here is images-only — photograph the page or set the Anthropic key). After confirm, generate asks the same provider for a 3–5 level MC pack; if that call fails it falls back to a deterministic pack from the kept facts.
+Restart `npm run dev`. Photos go through vision and return structured notes **in the worksheet language** (BCP-47 / ISO — Spanish stays `es`, French `fr`, etc.; we do not coerce to pl/en). PDFs: Anthropic document blocks (OpenAI vision here is images-only — photograph the page or set the Anthropic key). After confirm, generate asks the same provider for a 3–5 level MC pack in that language; if that call fails it falls back to a deterministic pack from the kept facts.
 
-`GET /api/homework/status` reports `{ mode: "openai" | "anthropic" | "fixture" }`.
+`GET /api/homework/status` reports `{ mode: "openai" | "anthropic" | "fixture", vision, fixtures }`.
 
 Generated packs live in the same Node process as in-memory rooms (about 6 hours). `npm run dev` restart clears them — scan again.
 
@@ -71,7 +79,7 @@ Scaffold for the Klasa 8 *Chłopi* problem question (~100 words). **No auto-full
 
 ## Quiz play UX
 
-- Each question card has **Czytaj** (Polish packs) or **Read** (English warm-up). It reads the stem, plus options when they are short. Same Web Speech API; **Stop** cancels. Prefers `pl-PL` or `en-US`/`en-GB` voices, then the default.
+- Each question card has **Czytaj** (Polish packs) or **Read** (other languages). It reads the stem, plus options when they are short. Same Web Speech API; **Stop** cancels. Prefers a matching voice for the pack language (pl-PL, en-US, es-ES, fr-FR, …), then the default.
 
 Short-answer worksheet items were converted to multiple choice so auto-score is reliable.
 

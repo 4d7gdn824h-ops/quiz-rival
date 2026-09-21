@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1100" viewBox="0 0 800 1100" role="img" aria-label="Los planetas ficha de ciencias">
+  <rect width="800" height="1100" fill="#f6f0e4"/>
+  <rect x="36" y="36" width="728" height="1028" fill="none" stroke="#4a3518" stroke-width="2"/>
+  <text x="60" y="80" font-family="Georgia, serif" font-size="18" fill="#7a6544">Clase 5 · ciencias · el sistema solar</text>
+  <text x="60" y="130" font-family="Georgia, serif" font-size="34" font-weight="700" fill="#24180a">Los planetas  ficha</text>
+  <text x="60" y="168" font-family="Georgia, serif" font-size="18" fill="#3d2c14">Estudia las notas. No copies un examen resuelto.</text>
+  <text x="60" y="210" font-family="Georgia, serif" font-size="16" fill="#7a6544">Nombre: _______________    Clase: 5</text>
+  <text x="60" y="238" font-family="Georgia, serif" font-size="16" fill="#7a6544">Escuela: ................................</text>
+  <line x1="60" y1="260" x2="740" y2="260" stroke="#d4c4a4"/>
+  <text x="60" y="300" font-family="Georgia, serif" font-size="20" font-weight="700" fill="#24180a">I. Datos</text>
+  <text x="60" y="336" font-family="Georgia, serif" font-size="17" fill="#24180a">1. El sistema solar tiene ocho planetas que giran alrededor del Sol.</text>
+  <text x="60" y="372" font-family="Georgia, serif" font-size="17" fill="#24180a">2. Mercurio, Venus, la Tierra y Marte son planetas rocosos.</text>
+  <text x="60" y="408" font-family="Georgia, serif" font-size="17" fill="#24180a">3. Júpiter es el planeta más grande del sistema solar.</text>
+  <text x="60" y="444" font-family="Georgia, serif" font-size="17" fill="#24180a">4. Saturno es conocido por sus anillos de hielo y polvo.</text>
+  <text x="60" y="500" font-family="Georgia, serif" font-size="20" font-weight="700" fill="#24180a">II. Recuerda</text>
+  <text x="60" y="536" font-family="Georgia, serif" font-size="17" fill="#24180a">Los planetas rocosos están más cerca del Sol que los gigantes.</text>
+  <rect x="60" y="580" width="680" height="220" fill="#fffaf1" stroke="#d4c4a4"/>
+  <text x="76" y="610" font-family="Georgia, serif" font-size="14" fill="#9a8866">Espacio para el alumno  QuizRival no escribe la respuesta.</text>
+  <text x="60" y="860" font-family="Georgia, serif" font-size="14" fill="#7a6544">Firma del padre o la madre: __________     Página 1 / 1</text>
+  <text x="60" y="890" font-family="Georgia, serif" font-size="13" fill="#9a8866">Fixture en español para QuizRival (sin clave de API).</text>
+</svg>

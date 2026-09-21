@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   cancelSpeech,
+  readAloudIdleLabel,
   speakText,
   speechSupported,
   type SpeechLocale,
@@ -76,9 +77,9 @@ export function ReadAloudButton({ text, lang, idleLabel, className }: Props) {
     if (!started) setSession({ text, lang, speaking: false });
   }, [lang, speaking, stop, text]);
 
-  const label = idleLabel ?? (lang === "en" ? "Read" : "Czytaj");
+  const label = idleLabel ?? readAloudIdleLabel(lang);
   const unsupported =
-    lang === "en"
+    readAloudIdleLabel(lang) === "Read"
       ? "Reading not supported on this browser"
       : "Czytanie nieobsługiwane w tej przeglądarce";
 

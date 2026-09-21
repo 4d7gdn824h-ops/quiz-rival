@@ -17,6 +17,9 @@ export const ALLOWED_UPLOAD_TYPES = new Set([
   "image/heic",
   "image/heif",
   "image/svg+xml",
+  "text/plain",
+  "text/markdown",
+  "application/json",
   "application/pdf",
 ]);
 
@@ -31,6 +34,9 @@ export function isAllowedUpload(file: File) {
     name.endsWith(".jpeg") ||
     name.endsWith(".webp") ||
     name.endsWith(".gif") ||
-    name.endsWith(".svg")
+    name.endsWith(".svg") ||
+    name.endsWith(".txt") ||
+    name.endsWith(".md") ||
+    name.endsWith(".json")
   );
 }

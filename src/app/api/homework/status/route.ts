@@ -1,12 +1,13 @@
+import { HOMEWORK_FIXTURES } from "@/data/fixtures/catalog";
 import { homeworkMode } from "@/lib/homework/mode";
-import { listFixtureIds } from "@/lib/homework/fixture";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   return Response.json({
     mode: homeworkMode(),
-    fixtures: listFixtureIds(),
-    fixtureImage: "/fixtures/chlopi-worksheet.svg",
+    vision: homeworkMode() !== "fixture",
+    fixtures: HOMEWORK_FIXTURES,
+    fixtureImage: HOMEWORK_FIXTURES[0]?.image ?? "/fixtures/chlopi-worksheet.svg",
   });
 }

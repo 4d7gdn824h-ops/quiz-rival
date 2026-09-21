@@ -2,34 +2,30 @@ import "server-only";
 
 import { LEVELS } from "@/data/levels";
 import { getPack } from "@/data/quizzes";
-import type { Level, QuizLanguage, QuizPackFile, QuizQuestion, QuizVariant } from "@/data/types";
+import type { Level, QuizPackFile, QuizQuestion, QuizVariant } from "@/data/types";
 import { GameError } from "@/lib/game/engine";
 import { randomId } from "@/lib/ids";
 import { notesFromKeptLines } from "./fixture";
+import { detectLanguage, normalizeQuizLanguage } from "./language";
 import { homeworkMode } from "./mode";
+import { quizChrome } from "./quiz-chrome";
 import { saveGeneratedPack } from "./registry";
 import type { ExtractedNotes, GeneratedHomeworkPack, HomeworkMode } from "./types";
 import { parseJsonObject } from "./vision";
 import { writingFromNotes } from "./writing-from-notes";
 
-const DISTRACTORS_PL = [
-  "Tego nie ma na tej karcie",
-  "To fakt z innej lektury, nie z tej pracy",
-  "To odpowiedź z matematyki, nie z tego tematu",
-  "Akcja dzieje się w kosmosie",
-];
-
-const DISTRACTORS_EN = [
-  "This is not on the worksheet",
-  "That fact is from a different topic",
-  "That is a math answer, not this subject",
-  "The setting is outer space",
-];
-
 export async function generateHomeworkPack(
   rawNotes: ExtractedNotes,
 ): Promise<GeneratedHomeworkPack> {
-  const notes = notesFromKeptLines(rawNotes);
+  const notes = notesFromKeptLines({
+    ...rawNotes,
+    language: normalizeQuizLanguage(
+      rawNotes.language && rawNotes.language !== "und" ? rawNotes.language : undefined,
+      detectLanguage(
+        `${rawNotes.title}\n${rawNotes.topics.join(" ")}\n${rawNotes.facts.join(" ")}\n${rawNotes.rawText}`,
+      ),
+    ),
+  });
   if (!notes.topics.length && !notes.facts.length) {
     throw new GameError("Keep at least a few topics or facts, then generate.", 400);
   }
@@ -135,8 +131,9 @@ function matchChlopiThemes(notes: ExtractedNotes) {
 function buildDeterministicPack(id: string, notes: ExtractedNotes) {
   const topics = ensureTopics(notes);
   const facts = notes.facts.length ? notes.facts : topics;
-  const language = notes.language;
-  const distractors = language === "en" ? DISTRACTORS_EN : DISTRACTORS_PL;
+  const language = normalizeQuizLanguage(notes.language, "und");
+  const chrome = quizChrome(language);
+  const distractors = chrome.distractors;
   const questionsA: QuizQuestion[] = [];
   const questionsB: QuizQuestion[] = [];
   const tiny: Level[] = [];
@@ -146,38 +143,32 @@ function buildDeterministicPack(id: string, notes: ExtractedNotes) {
     const other = facts.find((item) => item !== fact) ?? distractors[0];
     const qA1 = mcQuestion(
       `${id}-a-t${index + 1}q1`,
-      language === "en" ? `Which note matches “${topic}”?` : `Która notatka pasuje do wątku „${topic}”?`,
+      chrome.whichNote(topic),
       fact,
       [other, distractors[0], distractors[1]],
-      language === "en" ? `Worksheet fact: ${fact}` : `From the sheet: ${fact}`,
+      chrome.worksheetFact(fact),
     );
     const qA2 = mcQuestion(
       `${id}-a-t${index + 1}q2`,
-      language === "en"
-        ? `True or false: ${fact}`
-        : `Prawda czy fałsz: ${fact}`,
-      language === "en" ? "True" : "Prawda",
-      [language === "en" ? "False" : "Fałsz"],
-      language === "en"
-        ? "That statement is on the kept notes — True."
-        : "To zdanie jest na zatwierdzonej karcie — Prawda.",
+      chrome.trueFalse(fact),
+      chrome.trueLabel,
+      [chrome.falseLabel],
+      chrome.trueHint,
       ["A", "B"],
     );
     const qB1 = mcQuestion(
       `${id}-b-t${index + 1}q1`,
-      language === "en" ? `Pick the fact for: ${topic}` : `Wskaż fakt do tematu: ${topic}`,
+      chrome.pickFact(topic),
       fact,
       [distractors[2], distractors[3], other],
-      language === "en" ? `Same fact, rematch wording: ${fact}` : `Ten sam fakt, wariant B: ${fact}`,
+      chrome.rematchHint(fact),
     );
     const qB2 = mcQuestion(
       `${id}-b-t${index + 1}q2`,
-      language === "en"
-        ? `Does the worksheet include this idea: ${topic}?`
-        : `Czy na karcie jest ten wątek: ${topic}?`,
-      language === "en" ? "Yes" : "Tak",
-      [language === "en" ? "No" : "Nie"],
-      language === "en" ? "Yes — it is one of the approved topics." : "Tak — to zatwierdzony wątek.",
+      chrome.includesIdea(topic),
+      chrome.yes,
+      [chrome.no],
+      chrome.yesHint,
       ["A", "B"],
     );
     questionsA.push(qA1, qA2);
@@ -226,7 +217,7 @@ function ensureTopics(notes: ExtractedNotes) {
     .filter((fact) => !topics.includes(fact));
   const merged = [...topics, ...extras].slice(0, 5);
   while (merged.length < 3) {
-    merged.push(notes.language === "en" ? `Topic ${merged.length + 1}` : `Wątek ${merged.length + 1}`);
+    merged.push(quizChrome(notes.language).topicFallback(merged.length + 1));
   }
   return merged;
 }
@@ -261,15 +252,16 @@ async function generateWithLlm(
 ): Promise<{ pack: QuizPackFile; levels: Level[] }> {
   const prompt = `Create a sibling-rivalry quiz pack from confirmed homework notes.
 Kids must practice — do NOT write the essay for them, and do NOT dump worksheet answer-key short answers as student-facing explanations.
+Write every student-facing prompt, option, and level title in the worksheet language (${notes.language}). Do not translate the notes into English or Polish unless the worksheet already is that language. Do not coerce language to pl or en.
 Return JSON:
 {
   "title": string,
-  "language": "pl" | "en",
+  "language": "BCP-47 / ISO code matching the worksheet",
   "levels": [
     {
       "title": string,
       "theme": string,
-      "questionsA": [{ "prompt": string, "options": ["A text", "B text", "C text", "D text"], "correctIndex": 0, "parentHint": "English if language is pl" }],
+      "questionsA": [{ "prompt": string, "options": ["A text", "B text", "C text", "D text"], "correctIndex": 0, "parentHint": "English for the parent key screen" }],
       "questionsB": [same shape, reworded for rematch]
     }
   ]
@@ -294,7 +286,7 @@ Kept text: ${notes.rawText.slice(0, 4000)}`;
       questionsB?: LlmQuestion[];
     }[];
   };
-  const language: QuizLanguage = parsed.language === "en" ? "en" : notes.language;
+  const language = normalizeQuizLanguage(parsed.language, notes.language);
   const llmLevels = (parsed.levels ?? []).slice(0, 5);
   if (llmLevels.length < 3) {
     throw new Error("LLM returned too few levels");

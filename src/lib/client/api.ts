@@ -86,12 +86,18 @@ export async function extractHomeworkRequest(input: {
   file?: File | null;
   fixtureId?: string;
   forceFixture?: boolean;
+  pasteDemo?: boolean;
+  rawText?: string;
+  title?: string;
 }) {
   if (input.file) {
     const form = new FormData();
     form.append("file", input.file);
     if (input.forceFixture) form.append("forceFixture", "1");
     if (input.fixtureId) form.append("fixtureId", input.fixtureId);
+    if (input.pasteDemo) form.append("pasteDemo", "1");
+    if (input.rawText) form.append("rawText", input.rawText);
+    if (input.title) form.append("title", input.title);
     return parse<{
       id: string;
       mode: HomeworkMode;
@@ -110,7 +116,10 @@ export async function extractHomeworkRequest(input: {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         fixtureId: input.fixtureId,
-        forceFixture: input.forceFixture ?? Boolean(input.fixtureId),
+        forceFixture: input.forceFixture,
+        pasteDemo: input.pasteDemo,
+        rawText: input.rawText,
+        title: input.title,
       }),
     }),
   );

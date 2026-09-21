@@ -1,4 +1,5 @@
-export type QuizLanguage = "pl" | "en";
+/** BCP-47 / ISO 639 tag. Built-in packs use `"pl"` and `"en"`; scans may be any language. */
+export type QuizLanguage = string;
 export type QuizVariant = "A" | "B";
 
 /** Sibling rooms default to the full-pack mega-level. Flip to `tiny` when screenshots land. */
