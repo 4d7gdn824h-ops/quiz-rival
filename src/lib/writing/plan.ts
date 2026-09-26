@@ -46,6 +46,41 @@ export function wordTargetForGrade(grade?: string) {
   return GRADE_WORDS[normalizeGrade(grade)];
 }
 
+const WORD_UNIT =
+  "words?|palabras?|słów|słowa|wyrazów|wyrazy|wörter|wörtern|worte|worten|mots?|parole|woorden";
+
+/** Prompt length wins when the assignment states a count or range. Otherwise use the grade band. */
+export function wordTargetForPrompt(prompt: string, grade?: string) {
+  return parseWordTarget(prompt) ?? wordTargetForGrade(grade);
+}
+
+function parseWordTarget(prompt: string) {
+  const text = prompt.replace(/\u00a0/g, " ");
+  const unit = `(?:${WORD_UNIT})(?!\\p{L})`;
+  const sep = "(?:[-–—]|bis|and|und|to|do|et|à|y|e|a)";
+  const range = text.match(
+    new RegExp(`(?:^|[^\\d])(\\d{2,4})\\s*${sep}\\s*(\\d{2,4})\\s*-?\\s*${unit}`, "iu"),
+  );
+  if (range) {
+    const target = saneWordTarget(Number(range[1]), Number(range[2]));
+    if (target) return target;
+  }
+  const single = text.match(new RegExp(`(?:^|[^\\d])(\\d{2,4})\\s*-?\\s*${unit}`, "iu"));
+  if (single) {
+    const count = Number(single[1]);
+    return saneWordTarget(count, count);
+  }
+  return null;
+}
+
+function saneWordTarget(a: number, b: number) {
+  if (!Number.isInteger(a) || !Number.isInteger(b)) return null;
+  const min = Math.min(a, b);
+  const max = Math.max(a, b);
+  if (min < 20 || max > 2000) return null;
+  return { min, max };
+}
+
 export async function planWritingCoach(input: WritingPlanInput): Promise<WritingPlanResult> {
   const prompt = input.prompt.trim();
   if (prompt.length < 8) {
@@ -89,7 +124,7 @@ export async function planWritingCoach(input: WritingPlanInput): Promise<Writing
 }
 
 function coachUserPrompt(input: WritingPlanInput) {
-  const words = wordTargetForGrade(input.grade);
+  const words = wordTargetForPrompt(input.prompt, input.grade);
   const lang = input.language || "und";
   return `Build a step-by-step writing coach for this assignment. The child writes every sentence.
 Language for ALL student-facing strings: ${lang}. Do not translate the assignment itself.
@@ -150,7 +185,7 @@ export function configFromModel(raw: string, input: WritingPlanInput): WritingPr
     throw new Error("Coach hints were an essay, not a scaffold");
   }
   const sourceRaw = (parsed.source ?? {}) as Record<string, unknown>;
-  const words = wordTargetForGrade(input.grade);
+  const words = wordTargetForPrompt(input.prompt, input.grade);
   const ui = uiOverride(parsed.ui);
   return {
     ...local,
@@ -211,7 +246,7 @@ function normalizeStances(value: unknown, local: WritingPromptConfig) {
     const id = stanceId(String(item.id ?? ""), index);
     return {
       id,
-      label: clip(String(item.label || local.stances[index]?.label || id), 32),
+      label: clip(String(item.label || local.stances[index]?.label || id), 180),
       tip: clipHint(String(item.tip || local.stances[index]?.tip || "")),
       thesisHint: clipHint(String(item.thesisHint || local.stances[index]?.thesisHint || "")),
     };
@@ -499,7 +534,7 @@ export function localWritingCoach(input: WritingPlanInput): WritingPromptConfig 
     detectLanguage(`${input.title ?? ""}\n${prompt}`),
   );
   const grade = normalizeGrade(input.grade);
-  const words = wordTargetForGrade(grade);
+  const words = wordTargetForPrompt(prompt, grade);
   const copy = COPY[primaryLang(language)] ?? COPY.en;
   const topics = (input.topics ?? []).map((topic) => topic.trim()).filter(Boolean).slice(0, 3);
   const labels = topics.length ? topics : [clip(prompt, 42)];

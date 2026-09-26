@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+
 const stub = new URL("./server-only-stub.mjs", import.meta.url);
 
 export async function resolve(specifier, context, nextResolve) {
@@ -22,4 +24,12 @@ export async function resolve(specifier, context, nextResolve) {
     }
     throw error;
   }
+}
+
+export async function load(url, context, nextLoad) {
+  if (url.endsWith(".json")) {
+    const source = await readFile(new URL(url), "utf8");
+    return { format: "json", shortCircuit: true, source };
+  }
+  return nextLoad(url, context);
 }

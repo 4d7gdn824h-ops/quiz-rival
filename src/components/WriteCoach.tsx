@@ -735,7 +735,7 @@ function StanceStep({
               checked={stance === item.id}
               onChange={() => onPick(item.id)}
             />
-            <span className="font-display text-xl">{item.label}</span>
+            <span className="choice-label font-display text-xl">{item.label}</span>
             <span className="mt-1 block text-sm text-white/65">{item.tip}</span>
           </label>
         ))}

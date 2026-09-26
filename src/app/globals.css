@@ -393,11 +393,23 @@ body {
 
 .choice {
   display: block;
+  height: auto;
+  overflow: visible;
   border-radius: 1.1rem;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(0, 0, 0, 0.18);
   padding: 0.85rem 1rem;
   cursor: pointer;
+  white-space: normal;
+}
+
+.choice-label {
+  display: block;
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.25;
 }
 
 .choice-on {

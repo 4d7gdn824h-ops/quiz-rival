@@ -3,7 +3,7 @@ import { afterEach, describe, it } from "node:test";
 import { XAI_CHAT_COMPLETIONS_URL } from "../ai/xai";
 import { countWords } from "./words";
 import { resolveCoachUi } from "./chrome";
-import { planWritingCoach } from "./plan";
+import { planWritingCoach, wordTargetForPrompt } from "./plan";
 
 const originalFetch = globalThis.fetch;
 const SPANISH =
@@ -83,6 +83,33 @@ function spanishCoachJson() {
   });
 }
 
+describe("word targets", () => {
+  it("uses a count or range written in the prompt", () => {
+    assert.deepEqual(wordTargetForPrompt("Escribe un texto de 150–200 palabras sobre el agua.", "5"), {
+      min: 150,
+      max: 200,
+    });
+    assert.deepEqual(wordTargetForPrompt("Write 150-200 words on fractions.", "3"), {
+      min: 150,
+      max: 200,
+    });
+    assert.deepEqual(wordTargetForPrompt("Write 150 to 200 words.", "3"), { min: 150, max: 200 });
+    assert.deepEqual(wordTargetForPrompt("Écris entre 150 et 200 mots.", "8"), { min: 150, max: 200 });
+    assert.deepEqual(wordTargetForPrompt("Schreibe 150 bis 200 Wörter.", "8"), { min: 150, max: 200 });
+    assert.deepEqual(wordTargetForPrompt("Napisz ok. 100 słów o szkole.", "8"), { min: 100, max: 100 });
+    assert.deepEqual(wordTargetForPrompt("Write about 100 words on pets.", "11"), { min: 100, max: 100 });
+  });
+
+  it("falls back to the grade band when the prompt has no word count", () => {
+    assert.deepEqual(wordTargetForPrompt("Grades 4–6. Write about rivers in your town.", "5"), {
+      min: 60,
+      max: 110,
+    });
+    assert.deepEqual(wordTargetForPrompt(SPANISH, "5"), { min: 60, max: 110 });
+    assert.deepEqual(wordTargetForPrompt("Napisz o klasie 8 i wakacjach.", "8"), { min: 90, max: 140 });
+  });
+});
+
 describe("writing coach", () => {
   it("coaches a Spanish prompt from a mocked Grok response without writing the essay", async () => {
     process.env.XAI_API_KEY = "xai-test";
@@ -123,6 +150,43 @@ describe("writing coach", () => {
     ].join(" ");
     assert.ok(countWords(hints) < 120);
     assert.doesNotMatch(JSON.stringify(result.config), /chłopi|chlopi|jagna/i);
+  });
+
+  it("keeps a prompt word range and a long stance label", async () => {
+    process.env.XAI_API_KEY = "xai-test";
+    const prompt = "Should schools ban homework? Write 150–200 words. Take a clear side.";
+    let body = "";
+    globalThis.fetch = async (_input, init) => {
+      body = String(init?.body);
+      const parsed = JSON.parse(spanishCoachJson()) as { stances: { label: string }[] };
+      parsed.stances[0].label = "Yes — ban homework in middle school";
+      parsed.stances[1].label = "No — keep homework, with limits";
+      parsed.stances[2].label = "Partly — ban it only on weekends";
+      return Response.json({ choices: [{ message: { content: JSON.stringify(parsed) } }] });
+    };
+    const result = await planWritingCoach({
+      prompt,
+      language: "en",
+      grade: "5",
+    });
+    assert.match(body, /150/);
+    assert.match(body, /200/);
+    assert.equal(result.config.targetWordsMin, 150);
+    assert.equal(result.config.targetWordsMax, 200);
+    assert.equal(result.config.stances[0]?.label, "Yes — ban homework in middle school");
+    assert.equal(result.config.stances[1]?.label, "No — keep homework, with limits");
+    assert.doesNotMatch(result.config.stances.map((stance) => stance.label).join("\n"), /…/);
+  });
+
+  it("uses the prompt range on the local coach when AI is not configured", async () => {
+    const result = await planWritingCoach({
+      prompt: "Escribe 150-200 palabras sobre el agua en tu barrio y da un ejemplo.",
+      language: "es",
+      grade: "5",
+    });
+    assert.equal(result.mode, "fixture");
+    assert.equal(result.config.targetWordsMin, 150);
+    assert.equal(result.config.targetWordsMax, 200);
   });
 
   it("keeps a Spanish scaffold and says AI is not configured when no key is set", async () => {

@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning --import ./test/register.mjs --test src/lib/ai/xai.test.ts src/lib/homework/llm-pack.test.ts src/lib/writing/plan.test.ts"
+    "test": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning --import ./test/register.mjs --test src/lib/ai/xai.test.ts src/lib/homework/llm-pack.test.ts src/lib/homework/shuffle-options.test.ts src/lib/writing/plan.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",

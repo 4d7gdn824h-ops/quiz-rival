@@ -11,6 +11,7 @@ import { requestPracticePack, shouldUseChlopiFixture } from "./llm-pack";
 import { homeworkMode } from "./mode";
 import { quizChrome } from "./quiz-chrome";
 import { saveGeneratedPack } from "./registry";
+import { shufflePackOptions } from "./shuffle-options";
 import type { ExtractedNotes, GeneratedHomeworkPack, HomeworkMode } from "./types";
 import { writingFromNotes } from "./writing-from-notes";
 import { planWritingCoach } from "../writing/plan";
@@ -59,6 +60,7 @@ export async function generateHomeworkPack(
     ({ pack, levels } = buildDeterministicPack(id, notes));
   }
 
+  pack = shufflePackOptions(pack);
   validatePack(pack, levels);
   const writing = await writingCoachFor(id, notes, mode);
   const generated: GeneratedHomeworkPack = {
