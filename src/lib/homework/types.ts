@@ -7,7 +7,7 @@ import type {
 } from "@/data/types";
 import type { WritingPromptConfig } from "@/data/writing-config";
 
-export type HomeworkMode = "openai" | "anthropic" | "fixture";
+export type HomeworkMode = "xai" | "fixture";
 
 export interface ExtractLine {
   id: string;
@@ -42,6 +42,8 @@ export interface GeneratedHomeworkPack {
   writing: WritingPromptConfig | null;
   notes: ExtractedNotes;
   mode: HomeworkMode;
+  /** Set when generation fell back off Grok. */
+  notice?: string;
   createdAt: number;
 }
 

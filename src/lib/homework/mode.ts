@@ -1,9 +1,9 @@
+import { xaiConfigured } from "../ai/xai";
 import type { HomeworkMode } from "./types";
 
+/** Grok when `XAI_API_KEY` is set. OpenAI and Anthropic keys are ignored. */
 export function homeworkMode(): HomeworkMode {
-  if (process.env.OPENAI_API_KEY) return "openai";
-  if (process.env.ANTHROPIC_API_KEY) return "anthropic";
-  return "fixture";
+  return xaiConfigured() ? "xai" : "fixture";
 }
 
 export const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;

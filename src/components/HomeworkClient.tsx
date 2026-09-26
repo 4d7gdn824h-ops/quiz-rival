@@ -12,6 +12,7 @@ import {
 import { looksLikeJunk, notesFromRawText } from "@/lib/homework/lines";
 import type { ExtractedNotes, HomeworkMode } from "@/lib/homework/types";
 import type { PublicLevel } from "@/data/types";
+import { AiStatusBanner } from "./AiStatusBanner";
 import { HomeworkScanCard } from "./HomeworkScanCard";
 import { TinyPath } from "./TinyPath";
 
@@ -25,6 +26,9 @@ export function HomeworkClient() {
   const [packId, setPackId] = useState<string | null>(null);
   const [packTitle, setPackTitle] = useState<string | null>(null);
   const [pathLevels, setPathLevels] = useState<PublicLevel[]>([]);
+  const [hasEssay, setHasEssay] = useState(false);
+  const [packLanguage, setPackLanguage] = useState<string | null>(null);
+  const [generateNotice, setGenerateNotice] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -84,6 +88,10 @@ export function HomeworkClient() {
       writeTonightPackId(result.pack.id);
       setPackId(result.pack.id);
       setPackTitle(result.pack.title);
+      setPackLanguage(result.pack.language);
+      setHasEssay(Boolean(result.pack.hasEssay));
+      setGenerateNotice(result.notice);
+      setMode(result.mode);
       setPathLevels(result.pack.levels.filter((level) => !level.mega));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not generate pack");
@@ -111,8 +119,10 @@ export function HomeworkClient() {
         <h1 className="font-display text-4xl leading-tight">Tonight’s pack</h1>
         <p className="text-sm text-white/65">
           Photo/PDF → confirm topics → generate the tiny path. Keys stay off student screens.
+          Questions stay in the worksheet language (or the language you set).
         </p>
       </header>
+      <AiStatusBanner />
 
       {error ? (
         <p className="rounded-2xl bg-red-500/15 px-4 py-3 text-sm text-red-200" role="alert">
@@ -155,15 +165,22 @@ export function HomeworkClient() {
         <section className="card space-y-4">
           <h2 className="font-display text-2xl">Tiny path ready</h2>
           <p className="text-sm text-white/70">
-            <span className="font-semibold text-lime-200">{packTitle}</span> uses the same path as
-            Create room / Rematch. Host picks A/B there.
+            <span className="font-semibold text-lime-200">{packTitle}</span>
+            {packLanguage ? ` · ${packLanguage}` : ""} · {mode === "xai" ? "Grok" : "demo"}. Same
+            path as Create room / Rematch. Host picks A/B there.
           </p>
+          {generateNotice ? <p className="text-sm text-white/65">{generateNotice}</p> : null}
           {pathLevels.length ? (
             <TinyPath levels={pathLevels} completedIds={[]} disabled />
           ) : null}
           <Link className="btn-primary flex items-center justify-center" href={`/?pack=${packId}`}>
             Create room
           </Link>
+          {hasEssay ? (
+            <Link className="btn-secondary flex items-center justify-center" href={`/write?pack=${packId}`}>
+              Writing coach for this prompt
+            </Link>
+          ) : null}
           <button
             type="button"
             className="text-sm text-white/55 underline underline-offset-4"
@@ -213,12 +230,16 @@ function ConfirmForm({
   const needsPaste = keptTopics === 0 && keptQuestions === 0 && !lines.some((line) => line.keep);
 
   function applyPasted() {
+    const keepCustomTitle =
+      Boolean(title.trim()) &&
+      title.trim() !== notes.title &&
+      title.trim() !== "Tonight's homework";
     const next = notesFromRawText(paste, {
-      title: title.trim() || undefined,
+      title: keepCustomTitle ? title.trim() : undefined,
       language: language && language !== "und" ? language : undefined,
     });
     setLanguage(next.language);
-    if (!title.trim()) setTitle(next.title);
+    if (!keepCustomTitle) setTitle(next.title);
     setLines(next.lines);
     setTopics(toChecks(next.topics.length ? next.topics : next.facts, "topic"));
     setQuestions(toChecks(next.facts.length ? next.facts : keptLineTexts(next), "q"));

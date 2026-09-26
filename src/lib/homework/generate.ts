@@ -7,12 +7,13 @@ import { GameError } from "@/lib/game/engine";
 import { randomId } from "@/lib/ids";
 import { notesFromKeptLines } from "./fixture";
 import { detectLanguage, normalizeQuizLanguage } from "./language";
+import { requestPracticePack, shouldUseChlopiFixture } from "./llm-pack";
 import { homeworkMode } from "./mode";
 import { quizChrome } from "./quiz-chrome";
 import { saveGeneratedPack } from "./registry";
 import type { ExtractedNotes, GeneratedHomeworkPack, HomeworkMode } from "./types";
-import { parseJsonObject } from "./vision";
 import { writingFromNotes } from "./writing-from-notes";
+import { planWritingCoach } from "../writing/plan";
 
 export async function generateHomeworkPack(
   rawNotes: ExtractedNotes,
@@ -35,42 +36,59 @@ export async function generateHomeworkPack(
   let pack: QuizPackFile;
   let levels: Level[];
   let usedMode: HomeworkMode = "fixture";
+  let notice: string | undefined;
 
-  if (looksLikeChlopi(notes)) {
-    ({ pack, levels } = cloneChlopiPack(id, notes));
-    usedMode = "fixture";
-  } else if (mode !== "fixture") {
+  if (mode === "xai") {
     try {
-      const generated = await generateWithLlm(id, notes, mode);
-      pack = generated.pack;
-      levels = generated.levels;
-      usedMode = mode;
-    } catch {
-      ({ pack, levels } = buildDeterministicPack(id, notes));
+      ({ pack, levels } = await requestPracticePack(id, notes));
+      usedMode = "xai";
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Grok failed";
+      if (notes.fixtureId === "chlopi-worksheet") {
+        ({ pack, levels } = cloneChlopiPack(id, notes));
+        notice = `Grok could not build a pack (${message}), so the built-in Chłopi example was used.`;
+      } else {
+        ({ pack, levels } = buildDeterministicPack(id, notes));
+        notice = `Grok could not build a pack (${message}). Practice questions were built from the confirmed notes — this is not the Chłopi demo.`;
+      }
       usedMode = "fixture";
     }
+  } else if (shouldUseChlopiFixture(notes, mode)) {
+    ({ pack, levels } = cloneChlopiPack(id, notes));
   } else {
     ({ pack, levels } = buildDeterministicPack(id, notes));
   }
 
   validatePack(pack, levels);
+  const writing = await writingCoachFor(id, notes, mode);
   const generated: GeneratedHomeworkPack = {
     id,
     pack,
     levels,
-    writing: writingFromNotes(id, notes),
+    writing,
     notes,
     mode: usedMode,
+    notice,
     createdAt: Date.now(),
   };
   saveGeneratedPack(generated);
   return generated;
 }
 
-function looksLikeChlopi(notes: ExtractedNotes) {
-  if (notes.fixtureId === "chlopi-worksheet") return true;
-  const blob = `${notes.title}\n${notes.topics.join(" ")}\n${notes.rawText}`.toLowerCase();
-  return /chłopi|chlopi|reymont/.test(blob);
+async function writingCoachFor(id: string, notes: ExtractedNotes, mode: HomeworkMode) {
+  const local = writingFromNotes(id, notes);
+  const prompt = notes.essayPrompts[0]?.trim();
+  if (mode !== "xai" || !prompt || notes.fixtureId === "chlopi-worksheet") return local;
+  const planned = await planWritingCoach({
+    id,
+    prompt,
+    language: notes.language,
+    grade: "8",
+    title: notes.title,
+    topics: notes.topics,
+    facts: notes.facts,
+  });
+  return planned.config;
 }
 
 function cloneChlopiPack(id: string, notes: ExtractedNotes) {
@@ -243,178 +261,6 @@ function mcQuestion(
     correctOptionId: optionIds[0],
     parentHint,
   };
-}
-
-async function generateWithLlm(
-  id: string,
-  notes: ExtractedNotes,
-  mode: HomeworkMode,
-): Promise<{ pack: QuizPackFile; levels: Level[] }> {
-  const prompt = `Create a sibling-rivalry quiz pack from confirmed homework notes.
-Kids must practice — do NOT write the essay for them, and do NOT dump worksheet answer-key short answers as student-facing explanations.
-Write every student-facing prompt, option, and level title in the worksheet language (${notes.language}). Do not translate the notes into English or Polish unless the worksheet already is that language. Do not coerce language to pl or en.
-Return JSON:
-{
-  "title": string,
-  "language": "BCP-47 / ISO code matching the worksheet",
-  "levels": [
-    {
-      "title": string,
-      "theme": string,
-      "questionsA": [{ "prompt": string, "options": ["A text", "B text", "C text", "D text"], "correctIndex": 0, "parentHint": "English for the parent key screen" }],
-      "questionsB": [same shape, reworded for rematch]
-    }
-  ]
-}
-Need 3-5 levels. Each level 2-3 multiple-choice questions. Variant B is the same facts, different wording.
-Notes title: ${notes.title}
-Language: ${notes.language}
-Topics: ${notes.topics.join(" | ")}
-Facts: ${notes.facts.join(" | ")}
-Essay prompts (do not answer them): ${notes.essayPrompts.join(" | ")}
-Kept text: ${notes.rawText.slice(0, 4000)}`;
-
-  const raw =
-    mode === "openai" ? await completeOpenAI(prompt) : await completeAnthropic(prompt);
-  const parsed = parseJsonObject(raw) as {
-    title?: string;
-    language?: string;
-    levels?: {
-      title?: string;
-      theme?: string;
-      questionsA?: LlmQuestion[];
-      questionsB?: LlmQuestion[];
-    }[];
-  };
-  const language = normalizeQuizLanguage(parsed.language, notes.language);
-  const llmLevels = (parsed.levels ?? []).slice(0, 5);
-  if (llmLevels.length < 3) {
-    throw new Error("LLM returned too few levels");
-  }
-
-  const questionsA: QuizQuestion[] = [];
-  const questionsB: QuizQuestion[] = [];
-  const tiny: Level[] = [];
-  llmLevels.forEach((level, index) => {
-    const aQs = (level.questionsA ?? []).slice(0, 3).map((item, qIndex) =>
-      fromLlmQuestion(`${id}-a-l${index + 1}q${qIndex + 1}`, item),
-    );
-    const bQs = (level.questionsB ?? []).slice(0, 3).map((item, qIndex) =>
-      fromLlmQuestion(`${id}-b-l${index + 1}q${qIndex + 1}`, item),
-    );
-    if (aQs.length < 1 || bQs.length < 1) throw new Error("Level missing questions");
-    questionsA.push(...aQs);
-    questionsB.push(...bQs);
-    tiny.push({
-      id: `${id}-l${index + 1}`,
-      packId: id,
-      title: String(level.title || `Level ${index + 1}`).slice(0, 42),
-      theme: slugify(String(level.theme || level.title || `t${index + 1}`)) || `t${index + 1}`,
-      passRule: { type: "complete" },
-      questionIds: {
-        A: aQs.map((question) => question.id),
-        B: bQs.map((question) => question.id),
-      },
-    });
-  });
-
-  const pack: QuizPackFile = {
-    id,
-    title: String(parsed.title || notes.title).trim() || notes.title,
-    language,
-    source: "Homework scan · LLM",
-    variants: { A: questionsA, B: questionsB },
-  };
-  const levels: Level[] = [
-    {
-      id: `${id}-full`,
-      packId: id,
-      title: `${notes.title} · full pack`,
-      theme: "full-pack",
-      mega: true,
-      passRule: { type: "complete" },
-      questionIds: {
-        A: questionsA.map((question) => question.id),
-        B: questionsB.map((question) => question.id),
-      },
-    },
-    ...tiny,
-  ];
-  return { pack, levels };
-}
-
-type LlmQuestion = {
-  prompt?: string;
-  options?: string[];
-  correctIndex?: number;
-  parentHint?: string;
-};
-
-function fromLlmQuestion(id: string, item: LlmQuestion): QuizQuestion {
-  const options = (item.options ?? []).map((text, index) => ({
-    id: String.fromCharCode(65 + index),
-    text: String(text).trim(),
-  })).filter((option) => option.text);
-  if (options.length < 2) throw new Error("Question needs options");
-  const correctIndex = Math.min(Math.max(Number(item.correctIndex) || 0, 0), options.length - 1);
-  return {
-    id,
-    prompt: String(item.prompt || "").trim() || "Which is true?",
-    options,
-    correctOptionId: options[correctIndex].id,
-    parentHint: String(item.parentHint || "").trim() || "See the confirmed worksheet notes.",
-  };
-}
-
-async function completeOpenAI(prompt: string) {
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) throw new Error("OPENAI_API_KEY missing");
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: process.env.OPENAI_TEXT_MODEL || "gpt-4o-mini",
-      temperature: 0.4,
-      response_format: { type: "json_object" },
-      messages: [{ role: "user", content: prompt }],
-    }),
-  });
-  if (!response.ok) {
-    throw new Error(`OpenAI generate failed (${response.status})`);
-  }
-  const body = (await response.json()) as {
-    choices?: { message?: { content?: string } }[];
-  };
-  return body.choices?.[0]?.message?.content ?? "";
-}
-
-async function completeAnthropic(prompt: string) {
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) throw new Error("ANTHROPIC_API_KEY missing");
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "x-api-key": key,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model: process.env.ANTHROPIC_TEXT_MODEL || "claude-sonnet-4-5",
-      max_tokens: 5000,
-      temperature: 0.4,
-      messages: [{ role: "user", content: prompt }],
-    }),
-  });
-  if (!response.ok) {
-    throw new Error(`Anthropic generate failed (${response.status})`);
-  }
-  const body = (await response.json()) as {
-    content?: { type?: string; text?: string }[];
-  };
-  return body.content?.find((part) => part.type === "text")?.text ?? "";
 }
 
 function validatePack(pack: QuizPackFile, levels: Level[]) {

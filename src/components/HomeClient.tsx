@@ -16,6 +16,7 @@ import { writeSession } from "@/lib/client/session";
 import type { PublicHomeworkPack } from "@/lib/homework/types";
 import { normalizeRoomCode } from "@/lib/ids";
 import { toPublicLevel } from "@/lib/public-quiz";
+import { AiStatusBanner } from "./AiStatusBanner";
 import { HomeworkScanCard } from "./HomeworkScanCard";
 import { TinyPath } from "./TinyPath";
 
@@ -155,8 +156,8 @@ export function HomeClient({ initialPackId }: { initialPackId?: string }) {
   }
 
   const writeHref = "/write";
-  const writeKicker = "Kartkówka · 26 września";
-  const writeBlurb = "Write essay · pytanie problemowe · ~100 słów";
+  const writeKicker = "Writing coach";
+  const writeBlurb = "Any prompt, any language. Chłopi is one example.";
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 px-4 py-6">
@@ -167,6 +168,8 @@ export function HomeClient({ initialPackId }: { initialPackId?: string }) {
         <h1 className="font-display text-4xl font-bold tracking-tight">QuizRival</h1>
         <p className="text-sm text-white/70">Two kids. One quiz. Timer. Winner.</p>
       </header>
+
+      <AiStatusBanner />
 
       <label className="block space-y-2">
         <span className="text-sm font-medium text-white/80">Your display name</span>
@@ -268,7 +271,7 @@ export function HomeClient({ initialPackId }: { initialPackId?: string }) {
           <span className="block text-[0.7rem] font-semibold uppercase tracking-[0.22em] text-orange-300">
             {writeKicker}
           </span>
-          <h2 className="font-display text-xl leading-tight">Napisz wypracowanie</h2>
+          <h2 className="font-display text-xl leading-tight">Write the response</h2>
           <span className="block text-xs text-white/55">{writeBlurb}</span>
         </span>
         <span className="shrink-0 text-white/40" aria-hidden="true">
