@@ -1,4 +1,5 @@
 import type { PlaylistId, QuizVariant } from "@/data/types";
+import type { WritingPromptConfig } from "@/data/writing-config";
 import type { RoomSnapshot } from "@/lib/game/types";
 import type { ExtractedNotes, HomeworkMode, PublicHomeworkPack, PublicPackDetail } from "@/lib/homework/types";
 
@@ -125,8 +126,40 @@ export async function extractHomeworkRequest(input: {
   );
 }
 
+export async function fetchHomeworkStatus() {
+  return parse<{
+    mode: HomeworkMode;
+    configured: boolean;
+    vision: boolean;
+    message: string | null;
+    model: string | null;
+    visionModel: string | null;
+  }>(await fetch("/api/homework/status", { cache: "no-store" }));
+}
+
+export async function planWritingRequest(input: {
+  prompt: string;
+  language?: string;
+  grade?: string;
+  title?: string;
+  topics?: string[];
+  facts?: string[];
+}) {
+  return parse<{
+    mode: HomeworkMode;
+    notice: string | null;
+    config: WritingPromptConfig;
+  }>(
+    await fetch("/api/write/plan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }),
+  );
+}
+
 export async function generateHomeworkRequest(notes: ExtractedNotes) {
-  return parse<{ mode: HomeworkMode; pack: PublicHomeworkPack }>(
+  return parse<{ mode: HomeworkMode; notice: string | null; pack: PublicHomeworkPack }>(
     await fetch("/api/homework/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

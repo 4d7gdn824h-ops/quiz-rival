@@ -1,17 +1,16 @@
 import "server-only";
 
 /**
- * Vision extract for homework scans.
- *
- * TODO: Gemini / other providers if their keys land.
- * TODO: local OCR fallback (e.g. tesseract) when the page is a photo but no LLM key.
- * TODO: OpenAI PDF path — Chat Completions vision is images-only; PDFs currently
- *       require ANTHROPIC_API_KEY (document blocks) or a photograph of the page.
+ * Worksheet vision via xAI Grok only.
+ * Chat completions vision accepts images (JPEG, PNG, WebP, GIF). A PDF is
+ * structured from its text layer, or the parent photographs the page.
  */
 
-import type { ExtractedNotes, HomeworkMode } from "./types";
+import { xaiChat, xaiConfigured, xaiTextModel, xaiVisionModel } from "../ai/xai";
 import { asLines } from "./lines";
 import { detectLanguage, normalizeQuizLanguage } from "./language";
+import { parseJsonObject } from "./json";
+import type { ExtractedNotes } from "./types";
 
 const EXTRACT_INSTRUCTIONS = `You extract a child's homework worksheet for a parent-supervised quiz app.
 Return ONLY JSON with this shape:
@@ -27,131 +26,74 @@ Return ONLY JSON with this shape:
 Rules:
 - Help kids practice. Do NOT solve the worksheet. Do NOT write essay answers.
 - facts[] are study notes from the page (true statements, terms, names) — not the answer key to exercises when that would do the work for them.
-- essayPrompts[] only if the page asks for a longer written answer / pytanie problemowe / wypracowanie / essai / redacción.
+- essayPrompts[] only if the page asks for a longer written answer (essay, pytanie problemowe, wypracowanie, essai, redacción, texto).
 - Mark header junk (name, class, school, signature, page numbers) as junk: true.
-- Keep the original language of the worksheet in title, topics, facts, prompts, rawText, lines.`;
+- Keep the original language of the worksheet in title, topics, facts, prompts, rawText, lines.
+- Do not replace the page with a different book or the Polish novel Chłopi unless that is what is on the page.`;
+
+const VISION_MIME = new Set([
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+]);
+
+export function isVisionImage(mime: string, filename: string) {
+  if (VISION_MIME.has(mime.toLowerCase())) return true;
+  return /\.(png|jpe?g|gif|webp)$/i.test(filename);
+}
 
 export async function extractWithVision(input: {
   bytes: Buffer;
   mime: string;
   filename: string;
-}): Promise<{ notes: ExtractedNotes; mode: HomeworkMode }> {
-  const mode: HomeworkMode = process.env.OPENAI_API_KEY
-    ? "openai"
-    : process.env.ANTHROPIC_API_KEY
-      ? "anthropic"
-      : "fixture";
-  if (mode === "fixture") {
-    throw new Error("No vision API key configured");
+}): Promise<{ notes: ExtractedNotes; mode: "xai" }> {
+  if (!xaiConfigured()) {
+    throw new Error("XAI_API_KEY is not set");
   }
-
-  if (input.mime === "application/pdf" || input.filename.toLowerCase().endsWith(".pdf")) {
-    if (!process.env.ANTHROPIC_API_KEY) {
-      throw new Error(
-        "PDF scans need ANTHROPIC_API_KEY (OpenAI vision path is images-only). Photograph the page, or use the demo worksheet.",
-      );
-    }
-    const parsed = await extractWithAnthropic(input.bytes, "application/pdf");
-    return { notes: parsed, mode: "anthropic" };
+  if (!isVisionImage(input.mime, input.filename)) {
+    throw new Error(
+      "Grok vision reads photos (JPEG, PNG, WebP, GIF). Photograph the page, or paste the lines.",
+    );
   }
-
-  if (mode === "openai") {
-    const parsed = await extractWithOpenAI(input.bytes, input.mime);
-    return { notes: parsed, mode: "openai" };
-  }
-  const parsed = await extractWithAnthropic(input.bytes, input.mime);
-  return { notes: parsed, mode: "anthropic" };
+  const dataUrl = `data:${input.mime};base64,${input.bytes.toString("base64")}`;
+  const text = await xaiChat({
+    model: xaiVisionModel(),
+    temperature: 0.2,
+    json: true,
+    messages: [
+      {
+        role: "user",
+        content: [
+          { type: "text", text: EXTRACT_INSTRUCTIONS },
+          { type: "image_url", image_url: { url: dataUrl } },
+        ],
+      },
+    ],
+  });
+  return { notes: notesFromModelText(text), mode: "xai" };
 }
 
-async function extractWithOpenAI(bytes: Buffer, mime: string): Promise<ExtractedNotes> {
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) throw new Error("OPENAI_API_KEY missing");
-  const model = process.env.OPENAI_VISION_MODEL || "gpt-4o-mini";
-  const dataUrl = `data:${mime};base64,${bytes.toString("base64")}`;
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.2,
-      response_format: { type: "json_object" },
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: EXTRACT_INSTRUCTIONS },
-            { type: "image_url", image_url: { url: dataUrl } },
-          ],
-        },
-      ],
-    }),
-  });
-  if (!response.ok) {
-    const detail = await response.text();
-    throw new Error(`OpenAI vision failed (${response.status}): ${detail.slice(0, 280)}`);
+export async function structureNotesWithGrok(rawText: string, title?: string): Promise<ExtractedNotes> {
+  if (!xaiConfigured()) {
+    throw new Error("XAI_API_KEY is not set");
   }
-  const body = (await response.json()) as {
-    choices?: { message?: { content?: string } }[];
-  };
-  return notesFromModelText(body.choices?.[0]?.message?.content ?? "");
-}
-
-async function extractWithAnthropic(bytes: Buffer, mime: string): Promise<ExtractedNotes> {
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) throw new Error("ANTHROPIC_API_KEY missing");
-  const model = process.env.ANTHROPIC_VISION_MODEL || "claude-sonnet-4-5";
-  const block =
-    mime === "application/pdf"
-      ? {
-          type: "document" as const,
-          source: {
-            type: "base64" as const,
-            media_type: "application/pdf" as const,
-            data: bytes.toString("base64"),
-          },
-        }
-      : {
-          type: "image" as const,
-          source: {
-            type: "base64" as const,
-            media_type: mime as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
-            data: bytes.toString("base64"),
-          },
-        };
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "x-api-key": key,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 4000,
-      temperature: 0.2,
-      messages: [
-        {
-          role: "user",
-          content: [block, { type: "text", text: EXTRACT_INSTRUCTIONS }],
-        },
-      ],
-    }),
+  const text = await xaiChat({
+    model: xaiTextModel(),
+    temperature: 0.2,
+    json: true,
+    messages: [
+      {
+        role: "user",
+        content: `${EXTRACT_INSTRUCTIONS}\n\nTitle hint: ${title ?? ""}\n\nWorksheet text:\n${rawText.slice(0, 12000)}`,
+      },
+    ],
   });
-  if (!response.ok) {
-    const detail = await response.text();
-    throw new Error(`Anthropic vision failed (${response.status}): ${detail.slice(0, 280)}`);
-  }
-  const body = (await response.json()) as {
-    content?: { type?: string; text?: string }[];
-  };
-  const text = body.content?.find((part) => part.type === "text")?.text ?? "";
   return notesFromModelText(text);
 }
 
-function notesFromModelText(text: string): ExtractedNotes {
+export function notesFromModelText(text: string): ExtractedNotes {
   const parsed = parseJsonObject(text) as {
     title?: string;
     language?: string;
@@ -195,16 +137,4 @@ function notesFromModelText(text: string): ExtractedNotes {
 function stringList(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value.map((item) => String(item).trim()).filter(Boolean).slice(0, 16);
-}
-
-export function parseJsonObject(text: string): Record<string, unknown> {
-  const trimmed = text.trim();
-  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  const candidate = fenced ? fenced[1].trim() : trimmed;
-  const start = candidate.indexOf("{");
-  const end = candidate.lastIndexOf("}");
-  if (start < 0 || end <= start) {
-    throw new Error("Model did not return JSON");
-  }
-  return JSON.parse(candidate.slice(start, end + 1)) as Record<string, unknown>;
 }

@@ -7,6 +7,7 @@ import {
   SOURCE_TITLE,
   SOURCE_USE,
 } from "./chlopi-source";
+import type { CoachUi } from "@/lib/writing/chrome";
 import type { QuizLanguage } from "./types";
 import {
   CLOSING_HINT,
@@ -67,6 +68,10 @@ export interface WritingPromptConfig {
   stances: WritingStance[];
   themes: WritingTheme[];
   parentNotesEn: string[];
+  /** Questions the child uses to revise. Not a rewritten essay. */
+  reviewChecks?: string[];
+  /** Optional Grok overrides for coach buttons and step names. */
+  ui?: Partial<CoachUi>;
   source: WritingSource;
 }
 
@@ -96,6 +101,12 @@ export const CHLOPI_WRITING_CONFIG: WritingPromptConfig = {
     sampleSentence: THEME_SENTENCES[theme.id as keyof typeof THEME_SENTENCES] ?? theme.hint,
   })),
   parentNotesEn: [...PARENT_NOTES_EN],
+  reviewChecks: [
+    "Czy teza jest jasna (tak / nie / częściowo)?",
+    "Czy nazwałaś motyw z Chłopów (Jagna, wykluczenie albo Boryna–Antek)?",
+    "Czy przykład z dzisiaj jest Twoimi słowami, a nie gotowym akapitem?",
+    "Czy zamknięcie wraca do tezy?",
+  ],
   source: {
     kicker: SOURCE_KICKER,
     title: SOURCE_TITLE,

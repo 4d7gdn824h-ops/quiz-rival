@@ -127,8 +127,8 @@ export function HomeworkScanCard({
         <p className="text-xs text-white/45">Selected: {filename}</p>
       ) : (
         <p className="text-xs text-white/45">
-          Without a vision key, a photo is not treated as Chłopi — paste the page or pick a demo.
-          With a key, any language on the page is kept.
+          Photos go to Grok only when XAI_API_KEY is set. Without it, paste the page or pick a
+          demo — a photo is not treated as Chłopi.
         </p>
       )}
     </section>

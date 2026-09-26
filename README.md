@@ -28,23 +28,23 @@ Create room stays the first-fold CTA. Directly under it: a **Photo/PDF drop zone
 
 Flow: **Photo/PDF → “Reading…” → confirm topics → Generate tiny path → Create room / Rematch**.
 
-1. Drop or pick a photo/PDF, **Paste lines**, or a **demo worksheet** (Chłopi PL, Water cycle EN, Los planetas ES). The card shows **Reading…** then opens Confirm. No keys on this path.
+1. Drop or pick a photo/PDF, **Paste lines**, or a **demo worksheet** (Chłopi PL, Water cycle EN, Los planetas ES). The card shows **Reading…** then opens Confirm. Demos and pasted text do not need a key; a photo does (`XAI_API_KEY`).
 2. Confirm is a **checklist** of detected topics and notes. Uncheck junk (name blanks, signatures, answers you don’t want quizzed). You can also paste/edit the page text and set the worksheet language (BCP-47 / ISO, not limited to pl/en). Primary CTA: **Generate tiny path**.
 3. The new pack uses the **same TinyPath** component as built-in Chłopi — home, lobby, rematch. Host picks Tonight’s pack + A/B and Create/Join as usual. Quiz content stays in the homework language.
 
 Student APIs (`/api/rooms`, `/api/packs`, generate/extract responses) **strip** `correctOptionId` / `parentHint`. Keys exist only on `/parent/key`.
 
-Writing-coach generalization (essay wizard for a scanned prompt) is deferred; `/write` remains the hardcoded Chłopi scaffold.
+`/write` coaches any essay prompt (typed or scanned) in the assignment language. **Chłopi** is one built-in example, not the only path.
 
-### Fixture mode (no API key)
+### Demo mode (no API key)
 
-If `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` are unset, extract does **not** call a model and does **not** pretend every upload is Chłopi.
+If `XAI_API_KEY` is unset, the home, homework, and `/write` screens say **AI is not configured**. Extract does **not** call a model and does **not** pretend every upload is Chłopi. `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` are ignored — there is no fallback to those providers.
 
 **Without a key — prove any topic / any language:**
 
 1. Home or `/homework` → pick a demo: **Chłopi (PL)**, **Water cycle (EN)**, or **Los planetas (ES)** → confirm checklist → **Generate tiny path** → **Create room**.
 2. Or **Paste lines** (or drop a `.txt` / `.svg` / text PDF) → edit the page in any language → **Use this text** → generate. A photo without a key opens the same paste editor with a notice; it is not replaced by the Chłopi fixture.
-3. Generate builds a deterministic 3–5 node TinyPath from the confirmed topics/facts, with stems in pl / en / es / fr when we know the language (other languages keep the original notes and use English stems).
+3. Generate builds a deterministic 3–5 node TinyPath from the confirmed topics/facts, with stems in pl / en / es / fr when we know the language (other languages keep the original notes and use English stems). The language field on the confirm step is the language of the pack.
 
 Fixtures:
 
@@ -52,30 +52,38 @@ Fixtures:
 - `src/data/fixtures/water-cycle-worksheet.json` + `public/fixtures/water-cycle-worksheet.svg`
 - `src/data/fixtures/planetas-worksheet.json` + `public/fixtures/planetas-worksheet.svg`
 
-Chłopi generate still clones the built-in high-quality pack when the confirmed notes actually are that worksheet.
+Without a key, Chłopi generate still clones the built-in pack when the confirmed notes are that demo worksheet (or the text is actually about Chłopi). With `XAI_API_KEY` set, generate always asks Grok — including for a Chłopi page — and rejects a pack that switches an unrelated worksheet onto Chłopi.
 
-### With a vision key
+### With Grok
 
-Copy `.env.example` to `.env.local` and set **one** of:
+Copy `.env.example` to `.env.local`:
 
 ```bash
-OPENAI_API_KEY=sk-...          # preferred when set (images). gpt-4o-mini by default
-ANTHROPIC_API_KEY=sk-ant-...   # used if OpenAI is unset; required for PDF document blocks
+XAI_API_KEY=xai-...
+# Optional. Both default to grok-4.6 (text and image input).
+# XAI_MODEL=grok-4.6
+# XAI_VISION_MODEL=grok-4.6
 ```
 
-Restart `npm run dev`. Photos go through vision and return structured notes **in the worksheet language** (BCP-47 / ISO — Spanish stays `es`, French `fr`, etc.; we do not coerce to pl/en). PDFs: Anthropic document blocks (OpenAI vision here is images-only — photograph the page or set the Anthropic key). After confirm, generate asks the same provider for a 3–5 level MC pack in that language; if that call fails it falls back to a deterministic pack from the kept facts.
+Restart `npm run dev`. Photos go through Grok vision and return structured notes **in the worksheet language** (BCP-47 / ISO — Spanish stays `es`, French `fr`, etc.; we do not coerce to pl/en). PDFs and text files are structured by the text model when they have a text layer; a photo-only PDF should be photographed (JPEG, PNG, WebP, or GIF). After confirm, generate asks Grok for a 3–5 level multiple-choice pack in the language you kept, with guided parent hints rather than an answer dump. If that call fails, a deterministic pack is built from the kept facts (the Chłopi clone is only a last resort when the page was the Chłopi demo).
 
-`GET /api/homework/status` reports `{ mode: "openai" | "anthropic" | "fixture", vision, fixtures }`.
+`GET /api/homework/status` reports `{ mode: "xai" | "fixture", configured, vision, model, visionModel, message, fixtures }`.
 
 Generated packs live in the same Node process as in-memory rooms (about 6 hours). `npm run dev` restart clears them — scan again.
 
 ## Writing coach (`/write`)
 
-Scaffold for the Klasa 8 *Chłopi* problem question (~100 words). **No auto-full-essay button.** A later slice can load a scanned essay prompt into this same wizard.
-- **Podpowiedź** still reveals one sample sentence to adapt
-- Parent English notes stay behind **Pokaż wskazówki dla rodzica (EN)**
-- Persistent **Czytaj** opens the source sheet for the active prompt (Chłopi motifs, or scan facts/topics). Dismiss returns to the same step with the draft intact
-- **Na głos** is still browser `speechSynthesis` (no paid TTS)
+Any essay prompt, any language. Paste the assignment or scan a page, pick a grade band, and start. Grok returns the same steps — plan, thesis, arguments, example, draft, check — in that language. Hints are one sentence to rewrite. There is **no** button that writes the essay.
+
+**Chłopi · pytanie problemowe** is a built-in example (Klasa 8, ~100 words). It does not call Grok. Open it from `/write` or `/write?preset=chlopi`.
+
+Without `XAI_API_KEY`, a custom prompt still opens a local scaffold (Polish, English, Spanish, or French chrome when we know the language) and the screen says AI is not configured.
+
+- The hint control reveals one sample sentence to adapt
+- Parent English notes stay behind a parent-only toggle
+- **Read / Czytaj / Leer** opens the source sheet for the active prompt. Dismiss returns to the same step with the draft intact
+- Read-aloud is still browser `speechSynthesis` (no paid TTS)
+- A homework pack that detected an essay prompt links here as `/write?pack=…`
 
 ## Quiz play UX
 

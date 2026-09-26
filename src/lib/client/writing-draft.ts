@@ -6,6 +6,8 @@ export interface WritingDraft {
   stance: Stance | null;
   themes: string[];
   example: string;
+  /** Planning notes. Not part of the essay the child turns in. */
+  plan: string;
   thesis: string;
   themeLinks: string;
   modernPara: string;
@@ -18,6 +20,7 @@ export const EMPTY_DRAFT: WritingDraft = {
   stance: null,
   themes: [],
   example: "",
+  plan: "",
   thesis: "",
   themeLinks: "",
   modernPara: "",

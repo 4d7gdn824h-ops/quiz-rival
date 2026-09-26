@@ -21,6 +21,7 @@ export async function POST(request: Request) {
     }
     const payload = {
       mode: generated.mode,
+      notice: generated.notice ?? null,
       pack,
     };
     assertNoQuizSecrets(payload, "generate");

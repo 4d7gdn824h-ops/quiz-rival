@@ -8,9 +8,21 @@ type Props = {
   onClose: () => void;
   source: WritingSource;
   prompt: string;
+  labels?: {
+    close: string;
+    prompt: string;
+    facts: string;
+    sections: string;
+    use: string;
+  };
 };
 
-export function SourceSheet({ open, onClose, source, prompt }: Props) {
+export function SourceSheet({ open, onClose, source, prompt, labels }: Props) {
+  const closeLabel = labels?.close ?? "Zamknij";
+  const promptLabel = labels?.prompt ?? "Pytanie problemowe";
+  const factsLabel = labels?.facts ?? "Lektura w skrócie";
+  const sectionsLabel = labels?.sections ?? "Wątki";
+  const useLabel = labels?.use ?? "Jak korzystać";
   const titleId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
   const restoreRef = useRef<HTMLElement | null>(null);
@@ -66,20 +78,20 @@ export function SourceSheet({ open, onClose, source, prompt }: Props) {
               className="shrink-0 pt-1 text-sm font-semibold text-white/70 underline underline-offset-4"
               onClick={onClose}
             >
-              Zamknij
+              {closeLabel}
             </button>
           </div>
 
           <p className="text-sm leading-relaxed text-white/75">{source.intro}</p>
 
           <section className="card space-y-2">
-            <h3 className="text-sm font-semibold text-white/55">Pytanie problemowe</h3>
+            <h3 className="text-sm font-semibold text-white/55">{promptLabel}</h3>
             <p className="text-[1.02rem] leading-relaxed text-white/90">{prompt}</p>
           </section>
 
           {source.facts.length ? (
             <section className="space-y-2">
-              <h3 className="font-display text-xl">Lektura w skrócie</h3>
+              <h3 className="font-display text-xl">{factsLabel}</h3>
               <ul className="list-disc space-y-2 pl-5 text-sm leading-relaxed text-white/80">
                 {source.facts.map((fact) => (
                   <li key={fact}>{fact}</li>
@@ -90,7 +102,7 @@ export function SourceSheet({ open, onClose, source, prompt }: Props) {
 
           {source.sections.length ? (
             <section className="space-y-3">
-              <h3 className="font-display text-xl">Wątki</h3>
+              <h3 className="font-display text-xl">{sectionsLabel}</h3>
               {source.sections.map((section) => (
                 <article key={section.id} className="card space-y-1.5">
                   <h4 className="font-semibold text-lime-200">{section.title}</h4>
@@ -101,7 +113,7 @@ export function SourceSheet({ open, onClose, source, prompt }: Props) {
           ) : null}
 
           <section className="space-y-2">
-            <h3 className="font-display text-xl">Jak korzystać</h3>
+            <h3 className="font-display text-xl">{useLabel}</h3>
             <ul className="list-disc space-y-2 pl-5 text-sm leading-relaxed text-white/70">
               {source.use.map((item) => (
                 <li key={item}>{item}</li>
@@ -111,7 +123,7 @@ export function SourceSheet({ open, onClose, source, prompt }: Props) {
         </div>
         <div className="source-sheet-actions">
           <button type="button" className="btn-primary" onClick={onClose}>
-            Zamknij
+            {closeLabel}
           </button>
         </div>
       </div>
