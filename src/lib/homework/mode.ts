@@ -24,7 +24,8 @@ export function homeworkMode(): HomeworkMode {
   return "fixture";
 }
 
-export const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
+/** Stay under Vercel Hobby's 4.5MB request body. */
+export const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 
 export const ALLOWED_UPLOAD_TYPES = new Set([
   "image/jpeg",

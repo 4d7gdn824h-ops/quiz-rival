@@ -40,7 +40,8 @@ export function HomeworkScanCard({
       <input
         ref={fileRef}
         type="file"
-        accept="image/*,application/pdf,.svg,.txt"
+        accept="image/jpeg,image/png,application/pdf,.jpg,.jpeg,.png,.pdf"
+        data-testid="scan-file"
         className="sr-only"
         onChange={(event) => {
           take(event.target.files?.[0]);
@@ -50,8 +51,9 @@ export function HomeworkScanCard({
       <input
         ref={cameraRef}
         type="file"
-        accept="image/*"
+        accept="image/jpeg,image/png"
         capture="environment"
+        data-testid="scan-camera"
         className="sr-only"
         onChange={(event) => {
           take(event.target.files?.[0]);

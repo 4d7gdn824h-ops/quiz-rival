@@ -14,12 +14,18 @@ export async function POST(request: Request) {
   try {
     const body = (await request.json()) as { notes?: ExtractedNotes };
     if (!body.notes) {
-      return Response.json({ error: "Missing confirmed notes" }, { status: 400 });
+      return Response.json(
+        { error: "We read your page but couldn't build the quiz.", code: "generate_failed" },
+        { status: 400 },
+      );
     }
     const generated = await generateHomeworkPack(body.notes);
     const pack = getPublicPack(generated.id);
     if (!pack) {
-      return Response.json({ error: "Pack missing after generate" }, { status: 500 });
+      return Response.json(
+        { error: "We read your page but couldn't build the quiz.", code: "generate_failed" },
+        { status: 500 },
+      );
     }
     const gradeSeal = generated.mode === "xai" ? sealAnswerMap(generated.pack) : null;
     const payload = {

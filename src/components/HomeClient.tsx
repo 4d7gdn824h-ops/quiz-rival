@@ -12,6 +12,7 @@ import {
   writeHomeworkDraft,
   readTonightPackId,
 } from "@/lib/client/homework-draft";
+import { stashPendingScan } from "@/lib/client/pending-scan";
 import { readCompletedLevelIds } from "@/lib/client/path-progress";
 import { writeSession } from "@/lib/client/session";
 import type { PublicHomeworkPack } from "@/lib/homework/types";
@@ -292,7 +293,10 @@ export function HomeClient({ initialPackId }: { initialPackId?: string }) {
 
       <HomeworkScanCard
         busy={busy === "extract"}
-        onFile={(file) => void runExtract({ file })}
+        onFile={(file) => {
+          stashPendingScan(file);
+          router.push("/homework");
+        }}
         onDemo={(fixtureId) => void runExtract({ fixtureId })}
         onPasteDemo={() => void runExtract({ pasteDemo: true })}
       />

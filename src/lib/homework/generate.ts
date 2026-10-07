@@ -13,6 +13,7 @@ import { quizChrome } from "./quiz-chrome";
 import { saveGeneratedPack } from "./registry";
 import type { ExtractedNotes, GeneratedHomeworkPack, HomeworkMode } from "./types";
 import { parseJsonObject } from "./vision";
+import { HomeworkError } from "./errors";
 import { writingFromNotes } from "./writing-from-notes";
 import { xaiComplete } from "./xai";
 
@@ -51,22 +52,39 @@ export async function generateHomeworkPack(
   const mode = homeworkMode();
   const prepared = prepareNotes(rawNotes);
   let notes = prepared;
-  let pack: QuizPackFile;
-  let levels: Level[];
+  let pack: QuizPackFile | undefined;
+  let levels: Level[] | undefined;
   let usedMode: HomeworkMode = "fixture";
 
   if (mode === "xai" && !looksLikeChlopi(prepared)) {
     try {
       const generated = await generateWithLlm(randomId("hw"), prepared);
+      validatePack(generated.pack, generated.levels);
       pack = generated.pack;
       levels = generated.levels;
       usedMode = "xai";
     } catch {
-      ({ notes, pack, levels } = fixturePackFromNotes(rawNotes));
+      // The model timed out or returned junk. Build the quiz from the notes
+      // we already read so this request still returns a pack.
       usedMode = "fixture";
     }
-  } else {
-    ({ notes, pack, levels } = fixturePackFromNotes(rawNotes));
+  }
+
+  if (!pack || !levels) {
+    try {
+      const built = fixturePackFromNotes(rawNotes);
+      validatePack(built.pack, built.levels);
+      notes = built.notes;
+      pack = built.pack;
+      levels = built.levels;
+      usedMode = "fixture";
+    } catch {
+      throw new HomeworkError(
+        "We read your page but couldn't build the quiz.",
+        "generate_failed",
+        422,
+      );
+    }
   }
 
   validatePack(pack, levels);
@@ -317,7 +335,7 @@ Facts: ${notes.facts.join(" | ")}
 Essay prompts (do not answer them): ${notes.essayPrompts.join(" | ")}
 Kept text: ${notes.rawText.slice(0, 4000)}`;
 
-  const raw = await xaiComplete({ content: prompt, temperature: 0.4 });
+  const raw = await xaiComplete({ content: prompt, temperature: 0.4, maxTokens: 4096 });
   const parsed = parseJsonObject(raw) as {
     title?: string;
     language?: string;
