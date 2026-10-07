@@ -5,8 +5,24 @@ import { assertAiKeysStayServerSide } from "./mode";
 
 const XAI_TIMEOUT_MS = 40_000;
 
-export function xaiModel() {
-  return process.env.XAI_MODEL || "grok-4.7";
+/**
+ * Fast Grok with vision and no reasoning pass. On live Vercel, grok-4.6 with
+ * reasoning_effort "low" still took ~19 s to read a page and ~35–39 s to build
+ * the quiz (59 s end to end, right at the 40 s abort). This model reads the
+ * same page in ~7 s.
+ */
+export const FAST_XAI_MODEL = "grok-4.20-0309-non-reasoning";
+
+export function xaiModel(kind: "text" | "vision" = "text") {
+  if (kind === "vision") {
+    return process.env.XAI_VISION_MODEL || process.env.XAI_MODEL || FAST_XAI_MODEL;
+  }
+  return process.env.XAI_MODEL || FAST_XAI_MODEL;
+}
+
+/** Non-reasoning models reject reasoning_effort with a 400, so only send it to reasoning models. */
+export function supportsReasoningEffort(model: string) {
+  return !/non-reasoning|grok-build|grok-code/i.test(model);
 }
 
 function xaiChatUrl() {
@@ -24,11 +40,13 @@ export async function xaiComplete(input: {
   content: string | Array<Record<string, unknown>>;
   temperature?: number;
   maxTokens?: number;
+  kind?: "text" | "vision";
 }): Promise<string> {
   assertAiKeysStayServerSide();
   const key = process.env.XAI_API_KEY;
   if (!key) throw new HomeworkError("XAI_API_KEY missing", "xai_http", 500);
 
+  const model = xaiModel(input.kind);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), XAI_TIMEOUT_MS);
   try {
@@ -40,10 +58,10 @@ export async function xaiComplete(input: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: xaiModel(),
+        model,
         temperature: input.temperature ?? 0.2,
         max_tokens: input.maxTokens ?? 4096,
-        reasoning_effort: "low",
+        ...(supportsReasoningEffort(model) ? { reasoning_effort: "low" } : {}),
         response_format: { type: "json_object" },
         messages: [{ role: "user", content: input.content }],
       }),

@@ -60,7 +60,7 @@ Copy `.env.example` to `.env.local` and set the server-only key (never `NEXT_PUB
 
 ```bash
 XAI_API_KEY=...
-# XAI_MODEL=grok-4.7
+# XAI_MODEL=grok-4.20-0309-non-reasoning
 ```
 
 Restart `npm run dev`. Photos are sent inline to xAI and return structured notes **in the worksheet language** (BCP-47 / ISO — Spanish stays `es`, French `fr`, etc.; we do not coerce to pl/en). The file is not written to disk and is not uploaded to xAI file storage. Text PDFs are read on our server and the text is sent to xAI; a scanned PDF with no text layer should be photographed. After confirm, generate asks xAI for a 3–5 level MC pack in that language; if that call fails it falls back to a deterministic pack from the kept facts.
@@ -122,7 +122,8 @@ Environment variables (Project → Settings → Environment Variables):
 | Name | Required | Notes |
 | --- | --- | --- |
 | `XAI_API_KEY` | No | Server-only. Homework photos and worksheet text are sent to xAI when this is set. **Do not** use `NEXT_PUBLIC_XAI_API_KEY` or any `NEXT_PUBLIC_` AI key. |
-| `XAI_MODEL` | No | Defaults to `grok-4.7`. |
+| `XAI_MODEL` | No | Defaults to `grok-4.20-0309-non-reasoning` (fast, vision). Reasoning models get `reasoning_effort: "low"`. |
+| `XAI_VISION_MODEL` | No | Model for photo reads. Defaults to `XAI_MODEL`. |
 | `NEXT_PUBLIC_SUPABASE_URL` | No | Both Supabase vars are required for two-phone rooms on Vercel. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | No | Public anon key. Not an AI secret. |
 
