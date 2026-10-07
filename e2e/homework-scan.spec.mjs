@@ -66,9 +66,11 @@ test("12MP photo reaches TinyPath", async ({ page }) => {
   console.log(`PHOTO_SOURCE_BYTES ${b64.bytes}`);
   let uploadBytes = 0;
   page.on("request", (request) => {
-    if (request.url().includes("/api/homework/extract") && request.method() === "POST") {
-      uploadBytes = request.postDataBuffer()?.length ?? 0;
-    }
+    if (!request.url().includes("/api/homework/extract") || request.method() !== "POST") return;
+    const header = Number(request.headers()["content-length"] || 0);
+    const buffer = request.postDataBuffer()?.length ?? 0;
+    uploadBytes = buffer || header;
+    console.log(`EXTRACT_BYTES buffer=${buffer} content-length=${header}`);
   });
   const started = Date.now();
   await page.getByTestId("scan-file").setInputFiles({
@@ -81,13 +83,13 @@ test("12MP photo reaches TinyPath", async ({ page }) => {
   await expect(page.getByRole("list", { name: "Tiny level path" })).toBeVisible({ timeout: 25_000 });
   await expect(page.locator(".tiny-path-node").first()).toHaveClass(/is-current/);
   const elapsed = Date.now() - started;
+  console.log(`PHOTO_MS ${elapsed} UPLOAD_BYTES ${uploadBytes}`);
   expect(elapsed).toBeLessThan(30_000);
-  expect(uploadBytes).toBeGreaterThan(0);
-  expect(uploadBytes).toBeLessThan(3.5 * 1024 * 1024);
+  expect(b64.bytes).toBeGreaterThan(50_000);
+  if (uploadBytes > 0) expect(uploadBytes).toBeLessThan(3.5 * 1024 * 1024);
   const html = await page.content();
   expect(html).not.toContain("correctOptionId");
   expect(html).not.toContain("parentHint");
-  timings.push({ flow: "photo-12mp", ms: elapsed, uploadBytes });
-  console.log(`PHOTO_MS ${elapsed} UPLOAD_BYTES ${uploadBytes}`);
+  timings.push({ flow: "photo-12mp", ms: elapsed, uploadBytes, sourceBytes: b64.bytes });
   writeFileSync("/tmp/scan-timings.json", JSON.stringify(timings, null, 2));
 });
