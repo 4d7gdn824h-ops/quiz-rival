@@ -7,7 +7,7 @@
   /* Practice banner. Restyle from this block only. */
   --banner-bg: rgba(190, 255, 120, 0.16);
   --banner-fg: #f3ffe4;
-  --banner-size: clamp(8px, 2.45vw, 0.8rem);
+  --banner-size: clamp(12px, 2.45vw, 0.8rem);
   --banner-pad: 0.4rem 0.5rem;
 }
 
