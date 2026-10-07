@@ -89,6 +89,8 @@ export function createInitialState(input: {
     hostId: host.id,
     currentQuestionIndex: 0,
     questionEndsAt: null,
+    paused: false,
+    pausedRemainingMs: null,
     questionOrder: identityOrder(questions.length),
     playlistId,
     levelId,
@@ -135,6 +137,7 @@ export function startState(state: RoomState, actorId: string, now = Date.now()):
   const next = cloneState(state);
   next.room.status = "playing";
   next.room.currentQuestionIndex = 0;
+  clearPause(next.room);
   next.room.questionEndsAt = now + QUESTION_MS;
   return next;
 }
@@ -146,6 +149,9 @@ export function answerState(
 ): RoomState {
   if (state.room.status !== "playing") {
     throw new GameError("Not in a live question right now.");
+  }
+  if (state.room.paused) {
+    throw new GameError("The quiz is paused.");
   }
   const player = state.players.find((p) => p.id === input.playerId);
   if (!player) throw new GameError("You are not in this room.", 403);
@@ -191,8 +197,38 @@ export function answerState(
   return maybeHoldIfAllAnswered(next, now);
 }
 
+export function pauseState(state: RoomState, actorId: string, now = Date.now()): RoomState {
+  assertPlayer(state, actorId);
+  if (state.room.status !== "playing") {
+    throw new GameError("Not in a live question right now.");
+  }
+  if (state.room.paused) return state;
+  const remaining = state.room.questionEndsAt
+    ? Math.max(0, state.room.questionEndsAt - now)
+    : 0;
+  const next = cloneState(state);
+  next.room.paused = true;
+  next.room.pausedRemainingMs = remaining;
+  next.room.questionEndsAt = null;
+  return next;
+}
+
+export function resumeState(state: RoomState, actorId: string, now = Date.now()): RoomState {
+  assertPlayer(state, actorId);
+  if (state.room.status !== "playing") {
+    throw new GameError("Not in a live question right now.");
+  }
+  if (!state.room.paused) return state;
+  const remaining = Math.max(0, state.room.pausedRemainingMs ?? 0);
+  const next = cloneState(state);
+  clearPause(next.room);
+  next.room.questionEndsAt = now + remaining;
+  return next;
+}
+
 export function tickState(state: RoomState, now = Date.now()): RoomState {
   if (state.room.status !== "playing") return state;
+  if (state.room.paused) return state;
   if (!state.room.questionEndsAt) return state;
   if (now < state.room.questionEndsAt) {
     return maybeHoldIfAllAnswered(state, now);
@@ -222,6 +258,7 @@ export function rematchState(
   next.room.status = "lobby";
   next.room.currentQuestionIndex = 0;
   next.room.questionEndsAt = null;
+  clearPause(next.room);
   next.room.questionOrder = reshuffle
     ? shuffledOrder(questions.length)
     : identityOrder(questions.length);
@@ -247,6 +284,7 @@ export function selectLevelState(state: RoomState, actorId: string, levelId: str
   next.room.status = "lobby";
   next.room.currentQuestionIndex = 0;
   next.room.questionEndsAt = null;
+  clearPause(next.room);
   next.room.questionOrder = identityOrder(questions.length);
   if (state.room.status === "finished") {
     next.answers = [];
@@ -273,7 +311,19 @@ function assertHost(state: RoomState, actorId: string) {
   }
 }
 
+function assertPlayer(state: RoomState, actorId: string) {
+  if (!state.players.some((player) => player.id === actorId)) {
+    throw new GameError("You are not in this room.", 403);
+  }
+}
+
+function clearPause(room: Room) {
+  room.paused = false;
+  room.pausedRemainingMs = null;
+}
+
 function maybeHoldIfAllAnswered(state: RoomState, now: number): RoomState {
+  if (state.room.paused) return state;
   const qid = currentQuestionId(state);
   if (!qid) return state;
   const answered = state.players.every((p) =>
@@ -301,9 +351,11 @@ function advanceQuestion(state: RoomState, now: number): RoomState {
   if (next.room.currentQuestionIndex >= lastIndex) {
     next.room.status = "finished";
     next.room.questionEndsAt = null;
+    clearPause(next.room);
     return next;
   }
   next.room.currentQuestionIndex += 1;
+  clearPause(next.room);
   next.room.questionEndsAt = now + QUESTION_MS;
   return next;
 }

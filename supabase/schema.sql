@@ -9,6 +9,8 @@ create table if not exists rooms (
   host_id text not null,
   current_question_index int not null default 0,
   question_ends_at timestamptz,
+  paused boolean not null default false,
+  paused_remaining_ms integer,
   question_order int[] not null default '{}',
   playlist_id text not null default 'full',
   level_id text,
@@ -17,6 +19,8 @@ create table if not exists rooms (
 
 alter table rooms add column if not exists playlist_id text not null default 'full';
 alter table rooms add column if not exists level_id text;
+alter table rooms add column if not exists paused boolean not null default false;
+alter table rooms add column if not exists paused_remaining_ms integer;
 
 create table if not exists players (
   id text primary key,

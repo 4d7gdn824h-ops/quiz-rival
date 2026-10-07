@@ -1,7 +1,9 @@
 import {
   answerState,
   joinState,
+  pauseState,
   rematchState,
+  resumeState,
   selectLevelState,
   startState,
   tickState,
@@ -45,7 +47,7 @@ export async function POST(request: Request, { params }: CodeParams) {
       levelId?: string;
     };
 
-    return withRoomLock(code, async () => {
+    return await withRoomLock(code, async () => {
       const state = await store.getState(code);
       if (!state) {
         return Response.json({ error: "Room not found" }, { status: 404 });
@@ -87,6 +89,18 @@ export async function POST(request: Request, { params }: CodeParams) {
 
       if (body.action === "tick") {
         return Response.json(toSnapshot(current, body.playerId));
+      }
+
+      if (body.action === "pause") {
+        const next = pauseState(current, body.playerId);
+        await store.saveState(next);
+        return Response.json(toSnapshot(next, body.playerId));
+      }
+
+      if (body.action === "resume") {
+        const next = resumeState(current, body.playerId);
+        await store.saveState(next);
+        return Response.json(toSnapshot(next, body.playerId));
       }
 
       if (body.action === "rematch") {

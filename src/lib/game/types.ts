@@ -16,6 +16,10 @@ export interface Room {
   hostId: string;
   currentQuestionIndex: number;
   questionEndsAt: number | null;
+  /** Shared freeze: timer stops and answers are rejected until resume. */
+  paused: boolean;
+  /** Milliseconds left on the question clock when it was paused. */
+  pausedRemainingMs: number | null;
   questionOrder: number[];
   playlistId: PlaylistId;
   /** When set with `playlistId: "tiny"`, the room plays that one micro-round. */
@@ -64,6 +68,8 @@ export interface RoomSnapshot {
     hostId: string;
     currentQuestionIndex: number;
     questionEndsAt: number | null;
+    paused: boolean;
+    pausedRemainingMs: number | null;
     questionCount: number;
     questionSeconds: number;
     playlistId: PlaylistId;

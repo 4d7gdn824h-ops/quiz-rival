@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { QUESTION_MS, POLL_MS } from "@/lib/constants";
 import { fetchSnapshot, joinRoom, roomAction } from "@/lib/client/api";
 import {
@@ -9,7 +9,7 @@ import {
   readCompletedLevelIds,
 } from "@/lib/client/path-progress";
 import { readSession, writeSession } from "@/lib/client/session";
-import { questionSpeechText, readAloudIdleLabel } from "@/lib/client/speech";
+import { cancelSpeech, questionSpeechText, readAloudIdleLabel } from "@/lib/client/speech";
 import type { RoomSnapshot } from "@/lib/game/types";
 import { ReadAloudButton } from "./ReadAloudButton";
 import { Scoreboard, seatYouVsThem } from "./Scoreboard";
@@ -24,6 +24,9 @@ export function RoomClient({ code }: { code: string }) {
   const [needJoin, setNeedJoin] = useState(false);
   const [busy, setBusy] = useState(false);
   const [ready, setReady] = useState(false);
+  const pauseButtonRef = useRef<HTMLButtonElement>(null);
+  const resumeButtonRef = useRef<HTMLButtonElement>(null);
+  const wasPausedRef = useRef(false);
 
   const applySnap = useCallback((next: RoomSnapshot) => {
     if (next.room.status === "finished" && next.room.quizId && next.room.levelId) {
@@ -88,8 +91,20 @@ export function RoomClient({ code }: { code: string }) {
     };
   }, [applySnap, code, needJoin, playerId, ready]);
 
+  const paused = Boolean(snapshot?.room.paused && snapshot.room.status === "playing");
+
   useEffect(() => {
-    if (snapshot?.room.status !== "playing" || !playerId) return;
+    if (paused) {
+      cancelSpeech();
+      resumeButtonRef.current?.focus();
+    } else if (wasPausedRef.current) {
+      pauseButtonRef.current?.focus();
+    }
+    wasPausedRef.current = paused;
+  }, [paused]);
+
+  useEffect(() => {
+    if (snapshot?.room.status !== "playing" || !playerId || snapshot.room.paused) return;
     const id = window.setInterval(() => {
       if (!snapshot.room.questionEndsAt) return;
       if (Date.now() >= snapshot.room.questionEndsAt) {
@@ -99,7 +114,14 @@ export function RoomClient({ code }: { code: string }) {
       }
     }, 250);
     return () => window.clearInterval(id);
-  }, [applySnap, code, playerId, snapshot?.room.questionEndsAt, snapshot?.room.status]);
+  }, [
+    applySnap,
+    code,
+    playerId,
+    snapshot?.room.paused,
+    snapshot?.room.questionEndsAt,
+    snapshot?.room.status,
+  ]);
 
   async function onJoin(event: FormEvent) {
     event.preventDefault();
@@ -134,8 +156,25 @@ export function RoomClient({ code }: { code: string }) {
     }
   }
 
+  async function onPauseToggle(action: "pause" | "resume") {
+    if (!playerId || !snapshot || snapshot.room.status !== "playing") return;
+    if (action === "pause" && snapshot.room.paused) return;
+    if (action === "resume" && !snapshot.room.paused) return;
+    setBusy(true);
+    setError(null);
+    try {
+      applySnap(await roomAction(code, { action, playerId }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not update pause");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function onAnswer(choice: string) {
-    if (!playerId || !snapshot?.currentQuestion || snapshot.yourAnswer) return;
+    if (!playerId || !snapshot?.currentQuestion || snapshot.yourAnswer || snapshot.room.paused) {
+      return;
+    }
     try {
       applySnap(
         await roomAction(code, {
@@ -305,50 +344,103 @@ export function RoomClient({ code }: { code: string }) {
       ) : null}
 
       {snapshot.room.status === "playing" && snapshot.currentQuestion ? (
-        <section className="space-y-4">
-          <TimerBar endsAt={snapshot.room.questionEndsAt} totalMs={QUESTION_MS} />
-          <article className="card space-y-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lime-300">
-              Question {snapshot.room.currentQuestionIndex + 1} / {snapshot.room.questionCount}
-              {currentLevelTitle ? ` · ${currentLevelTitle}` : ""}
-            </p>
-            <h2 className="font-display text-[1.65rem] leading-snug">
-              {snapshot.currentQuestion.prompt}
-            </h2>
-            <ReadAloudButton
-              text={questionSpeechText(snapshot.currentQuestion)}
-              lang={packLang}
-              idleLabel={readAloudIdleLabel(packLang)}
-              className="btn-read w-full"
-            />
-          </article>
-          <div className="grid gap-3">
-            {snapshot.currentQuestion.options.map((option) => {
-              const selected = snapshot.yourAnswer === option.id;
-              const locked = Boolean(snapshot.yourAnswer);
-              return (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => void onAnswer(option.id)}
-                  disabled={locked}
-                  className={`answer ${selected ? "answer-on" : ""}`}
-                >
-                  <span className="font-display text-xl text-lime-300">{option.id}</span>
-                  <span className="text-left text-base font-medium leading-snug">
-                    {option.text}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-          {snapshot.yourAnswer ? (
-            <p className="text-center text-sm text-lime-200">
-              Locked in. Keys stay hidden until the parent screen.
-            </p>
-          ) : (
-            <p className="text-center text-sm text-white/45">Tap an answer. You get one shot.</p>
+        <section className="space-y-4" data-question-index={snapshot.room.currentQuestionIndex}>
+          <TimerBar
+            endsAt={paused ? null : snapshot.room.questionEndsAt}
+            frozenRemainingMs={paused ? snapshot.room.pausedRemainingMs : null}
+            totalMs={QUESTION_MS}
+          />
+          {paused ? null : (
+            <button
+              ref={pauseButtonRef}
+              type="button"
+              className="btn-secondary"
+              onClick={() => void onPauseToggle("pause")}
+              disabled={busy}
+            >
+              Pause
+            </button>
           )}
+          <div className="relative space-y-4">
+            <div
+              className={`space-y-4 ${paused ? "pointer-events-none select-none" : ""}`}
+              inert={paused ? true : undefined}
+            >
+              <article className="card space-y-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lime-300">
+                  Question {snapshot.room.currentQuestionIndex + 1} / {snapshot.room.questionCount}
+                  {currentLevelTitle ? ` · ${currentLevelTitle}` : ""}
+                </p>
+                <h2 className="font-display text-[1.65rem] leading-snug">
+                  {snapshot.currentQuestion.prompt}
+                </h2>
+                <ReadAloudButton
+                  text={questionSpeechText(snapshot.currentQuestion)}
+                  lang={packLang}
+                  idleLabel={readAloudIdleLabel(packLang)}
+                  className="btn-read w-full"
+                />
+              </article>
+              <div className="grid gap-3">
+                {snapshot.currentQuestion.options.map((option) => {
+                  const selected = snapshot.yourAnswer === option.id;
+                  const locked = Boolean(snapshot.yourAnswer) || paused;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => void onAnswer(option.id)}
+                      disabled={locked}
+                      className={`answer ${selected ? "answer-on" : ""}`}
+                    >
+                      <span className="font-display text-xl text-lime-300">{option.id}</span>
+                      <span className="text-left text-base font-medium leading-snug">
+                        {option.text}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              {snapshot.yourAnswer ? (
+                <p className="text-center text-sm text-lime-200">
+                  Locked in. Keys stay hidden until the parent screen.
+                </p>
+              ) : (
+                <p className="text-center text-sm text-white/45">Tap an answer. You get one shot.</p>
+              )}
+            </div>
+            {paused ? (
+              <div
+                className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 rounded-3xl border border-white/10 bg-[#0c1022]/95 px-5 py-8 text-center"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="quiz-paused-title"
+                data-paused="true"
+              >
+                <p id="quiz-paused-title" className="font-display text-5xl font-bold">
+                  Paused
+                </p>
+                <p className="text-sm text-white/70">
+                  Timer frozen on this question. Answers stay locked until you resume.
+                </p>
+                <button
+                  ref={resumeButtonRef}
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => void onPauseToggle("resume")}
+                  disabled={busy}
+                >
+                  Resume
+                </button>
+                <Link
+                  className="text-sm text-white/50 underline underline-offset-4"
+                  href="/"
+                >
+                  Leave room
+                </Link>
+              </div>
+            ) : null}
+          </div>
         </section>
       ) : null}
 
