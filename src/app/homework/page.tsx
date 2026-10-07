@@ -1,4 +1,5 @@
 import { HomeworkClient } from "@/components/HomeworkClient";
+import { PracticeBanner } from "@/components/PracticeBanner";
 
 export const metadata = {
   title: "Scan homework · QuizRival",
@@ -6,5 +7,10 @@ export const metadata = {
 };
 
 export default function HomeworkPage() {
-  return <HomeworkClient />;
+  return (
+    <>
+      <PracticeBanner />
+      <HomeworkClient />
+    </>
+  );
 }

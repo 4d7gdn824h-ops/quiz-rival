@@ -38,7 +38,7 @@ Writing-coach generalization (essay wizard for a scanned prompt) is deferred; `/
 
 ### Fixture mode (no API key)
 
-If `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` are unset, extract does **not** call a model and does **not** pretend every upload is Chłopi.
+If `XAI_API_KEY` is unset, extract does **not** call a model and does **not** pretend every upload is Chłopi.
 
 **Without a key — prove any topic / any language:**
 
@@ -56,18 +56,18 @@ Chłopi generate still clones the built-in high-quality pack when the confirmed 
 
 ### With a vision key
 
-Copy `.env.example` to `.env.local` and set **one** of:
+Copy `.env.example` to `.env.local` and set the server-only key (never `NEXT_PUBLIC_`):
 
 ```bash
-OPENAI_API_KEY=sk-...          # preferred when set (images). gpt-4o-mini by default
-ANTHROPIC_API_KEY=sk-ant-...   # used if OpenAI is unset; required for PDF document blocks
+XAI_API_KEY=...
+# XAI_MODEL=grok-4.7
 ```
 
-Restart `npm run dev`. Photos go through vision and return structured notes **in the worksheet language** (BCP-47 / ISO — Spanish stays `es`, French `fr`, etc.; we do not coerce to pl/en). PDFs: Anthropic document blocks (OpenAI vision here is images-only — photograph the page or set the Anthropic key). After confirm, generate asks the same provider for a 3–5 level MC pack in that language; if that call fails it falls back to a deterministic pack from the kept facts.
+Restart `npm run dev`. Photos are sent inline to xAI and return structured notes **in the worksheet language** (BCP-47 / ISO — Spanish stays `es`, French `fr`, etc.; we do not coerce to pl/en). The file is not written to disk and is not uploaded to xAI file storage. Text PDFs are read on our server and the text is sent to xAI; a scanned PDF with no text layer should be photographed. After confirm, generate asks xAI for a 3–5 level MC pack in that language; if that call fails it falls back to a deterministic pack from the kept facts.
 
-`GET /api/homework/status` reports `{ mode: "openai" | "anthropic" | "fixture", vision, fixtures }`.
+`GET /api/homework/status` reports `{ mode: "xai" | "fixture", vision, fixtures }`.
 
-Generated packs live in the same Node process as in-memory rooms (about 6 hours). `npm run dev` restart clears them — scan again.
+The original photo, PDF, or pasted upload is not kept after that request. A generated quiz can live in the same Node process as in-memory rooms (about 6 hours) so one server can host a room. `npm run dev` restart clears it — scan again. On Vercel, practice on one phone without waiting for that memory.
 
 ## Writing coach (`/write`)
 
@@ -90,6 +90,7 @@ Short-answer worksheet items were converted to multiple choice so auto-score is 
 
 - **Default:** in-memory room store in the Next.js server + polling (~450ms) and Server-Sent Events. Two phones talking to the **same** `npm run dev` process can play. Two tabs in one browser work the same way.
 - **Limitation:** the memory store lives in one Node process. It will not sync across multiple serverless instances (typical production host). Homework packs share that limitation.
+- **Vercel without Supabase:** Create room and Join room do not dead-end. They offer **pass and play** on one phone (two players, same 25s timer, rivalry strip, winner screen) and a **tiny path** you can play alone. Students still never see answer keys. Demo worksheets, paste, and `/write` work with no Supabase env.
 
 ### Plug in Supabase
 
@@ -105,6 +106,31 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_ANON_KEY
 4. Restart `npm run dev`. The API uses the Supabase tables when both env vars are present (`GET /api/health` or `GET /api/rooms` reports `"store": "supabase"`).
 
 Game logic (scoring, hiding keys) always runs on the server. Clients only receive public question text + live scores.
+
+## Deploy on Vercel (Hobby)
+
+Framework preset: **Next.js**.
+
+| Setting | Value |
+| --- | --- |
+| Install command | `npm install` |
+| Build command | `npm run build` |
+| Output | Next.js default (do not set a custom output directory) |
+
+Environment variables (Project → Settings → Environment Variables):
+
+| Name | Required | Notes |
+| --- | --- | --- |
+| `XAI_API_KEY` | No | Server-only. Homework photos and worksheet text are sent to xAI when this is set. **Do not** use `NEXT_PUBLIC_XAI_API_KEY` or any `NEXT_PUBLIC_` AI key. |
+| `XAI_MODEL` | No | Defaults to `grok-4.7`. |
+| `NEXT_PUBLIC_SUPABASE_URL` | No | Both Supabase vars are required for two-phone rooms on Vercel. |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | No | Public anon key. Not an AI secret. |
+
+Without Supabase, a reviewer can still test alone: home → demo worksheet or paste → generate → practice on this phone, the tiny path, or `/write`. Create room stays the primary button. Scan stays under it.
+
+Uploads are not stored after processing. There are no third-party analytics or ads.
+
+Privacy and support pages: `/privacy`, `/support`. Replace the operator and contact placeholders in `src/lib/site.ts` before a store listing.
 
 ## Scripts
 

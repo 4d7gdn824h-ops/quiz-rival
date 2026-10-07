@@ -1,17 +1,15 @@
 import "server-only";
 
 /**
- * Vision extract for homework scans.
- *
- * TODO: Gemini / other providers if their keys land.
- * TODO: local OCR fallback (e.g. tesseract) when the page is a photo but no LLM key.
- * TODO: OpenAI PDF path — Chat Completions vision is images-only; PDFs currently
- *       require ANTHROPIC_API_KEY (document blocks) or a photograph of the page.
+ * Homework vision goes to xAI on our server.
+ * Bytes stay in this request. We do not call the xAI Files API (that would
+ * store the upload) and we do not write the file to disk.
  */
 
-import type { ExtractedNotes, HomeworkMode } from "./types";
+import type { ExtractedNotes } from "./types";
 import { asLines } from "./lines";
 import { detectLanguage, normalizeQuizLanguage } from "./language";
+import { xaiComplete } from "./xai";
 
 const EXTRACT_INSTRUCTIONS = `You extract a child's homework worksheet for a parent-supervised quiz app.
 Return ONLY JSON with this shape:
@@ -35,119 +33,36 @@ export async function extractWithVision(input: {
   bytes: Buffer;
   mime: string;
   filename: string;
-}): Promise<{ notes: ExtractedNotes; mode: HomeworkMode }> {
-  const mode: HomeworkMode = process.env.OPENAI_API_KEY
-    ? "openai"
-    : process.env.ANTHROPIC_API_KEY
-      ? "anthropic"
-      : "fixture";
-  if (mode === "fixture") {
+}): Promise<{ notes: ExtractedNotes; mode: "xai" }> {
+  if (!process.env.XAI_API_KEY) {
     throw new Error("No vision API key configured");
   }
-
   if (input.mime === "application/pdf" || input.filename.toLowerCase().endsWith(".pdf")) {
-    if (!process.env.ANTHROPIC_API_KEY) {
-      throw new Error(
-        "PDF scans need ANTHROPIC_API_KEY (OpenAI vision path is images-only). Photograph the page, or use the demo worksheet.",
-      );
-    }
-    const parsed = await extractWithAnthropic(input.bytes, "application/pdf");
-    return { notes: parsed, mode: "anthropic" };
+    throw new Error(
+      "Photograph the page as a JPEG or PNG. We do not upload PDF files to xAI storage.",
+    );
   }
-
-  if (mode === "openai") {
-    const parsed = await extractWithOpenAI(input.bytes, input.mime);
-    return { notes: parsed, mode: "openai" };
-  }
-  const parsed = await extractWithAnthropic(input.bytes, input.mime);
-  return { notes: parsed, mode: "anthropic" };
+  const mime = input.mime || "image/jpeg";
+  const dataUrl = `data:${mime};base64,${input.bytes.toString("base64")}`;
+  const text = await xaiComplete({
+    temperature: 0.2,
+    content: [
+      { type: "text", text: EXTRACT_INSTRUCTIONS },
+      { type: "image_url", image_url: { url: dataUrl } },
+    ],
+  });
+  return { notes: notesFromModelText(text), mode: "xai" };
 }
 
-async function extractWithOpenAI(bytes: Buffer, mime: string): Promise<ExtractedNotes> {
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) throw new Error("OPENAI_API_KEY missing");
-  const model = process.env.OPENAI_VISION_MODEL || "gpt-4o-mini";
-  const dataUrl = `data:${mime};base64,${bytes.toString("base64")}`;
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.2,
-      response_format: { type: "json_object" },
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: EXTRACT_INSTRUCTIONS },
-            { type: "image_url", image_url: { url: dataUrl } },
-          ],
-        },
-      ],
-    }),
+export async function structureWorksheetText(
+  rawText: string,
+  titleHint?: string,
+): Promise<ExtractedNotes> {
+  const clipped = rawText.slice(0, 12000);
+  const text = await xaiComplete({
+    temperature: 0.2,
+    content: `${EXTRACT_INSTRUCTIONS}\n\nWorksheet title hint: ${titleHint || "Tonight's homework"}\n\nWorksheet text:\n${clipped}`,
   });
-  if (!response.ok) {
-    const detail = await response.text();
-    throw new Error(`OpenAI vision failed (${response.status}): ${detail.slice(0, 280)}`);
-  }
-  const body = (await response.json()) as {
-    choices?: { message?: { content?: string } }[];
-  };
-  return notesFromModelText(body.choices?.[0]?.message?.content ?? "");
-}
-
-async function extractWithAnthropic(bytes: Buffer, mime: string): Promise<ExtractedNotes> {
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) throw new Error("ANTHROPIC_API_KEY missing");
-  const model = process.env.ANTHROPIC_VISION_MODEL || "claude-sonnet-4-5";
-  const block =
-    mime === "application/pdf"
-      ? {
-          type: "document" as const,
-          source: {
-            type: "base64" as const,
-            media_type: "application/pdf" as const,
-            data: bytes.toString("base64"),
-          },
-        }
-      : {
-          type: "image" as const,
-          source: {
-            type: "base64" as const,
-            media_type: mime as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
-            data: bytes.toString("base64"),
-          },
-        };
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "x-api-key": key,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 4000,
-      temperature: 0.2,
-      messages: [
-        {
-          role: "user",
-          content: [block, { type: "text", text: EXTRACT_INSTRUCTIONS }],
-        },
-      ],
-    }),
-  });
-  if (!response.ok) {
-    const detail = await response.text();
-    throw new Error(`Anthropic vision failed (${response.status}): ${detail.slice(0, 280)}`);
-  }
-  const body = (await response.json()) as {
-    content?: { type?: string; text?: string }[];
-  };
-  const text = body.content?.find((part) => part.type === "text")?.text ?? "";
   return notesFromModelText(text);
 }
 
@@ -178,7 +93,7 @@ function notesFromModelText(text: string): ExtractedNotes {
   const blob = `${parsed.title ?? ""}\n${topics.join(" ")}\n${facts.join(" ")}\n${rawText}`;
   const language = normalizeQuizLanguage(parsed.language, detectLanguage(blob));
   if (!topics.length && !facts.length && !rawText && !lines.length) {
-    throw new Error("Vision model returned empty notes");
+    throw new Error("xAI returned empty notes");
   }
   const kept = lines.filter((line) => line.keep).map((line) => line.text);
   return {

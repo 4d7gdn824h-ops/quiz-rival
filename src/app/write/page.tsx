@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { PracticeBanner } from "@/components/PracticeBanner";
 import { WriteCoach } from "@/components/WriteCoach";
 
 export const metadata: Metadata = {
@@ -7,5 +8,10 @@ export const metadata: Metadata = {
 };
 
 export default function WritePage() {
-  return <WriteCoach />;
+  return (
+    <>
+      <PracticeBanner />
+      <WriteCoach />
+    </>
+  );
 }

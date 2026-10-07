@@ -1,6 +1,7 @@
 import type { PlaylistId, QuizVariant } from "@/data/types";
 import type { RoomSnapshot } from "@/lib/game/types";
 import type { ExtractedNotes, HomeworkMode, PublicHomeworkPack, PublicPackDetail } from "@/lib/homework/types";
+import type { PlayKit } from "@/lib/play/types";
 
 async function parse<T>(res: Response): Promise<T> {
   const data = (await res.json().catch(() => ({}))) as T & { error?: string };
@@ -70,6 +71,12 @@ export async function roomAction(
   );
 }
 
+export async function fetchRoomService() {
+  return parse<{ store: "memory" | "supabase"; multiplayer: boolean; ok: boolean }>(
+    await fetch("/api/rooms", { cache: "no-store" }),
+  );
+}
+
 export async function fetchPackCatalog() {
   return parse<{ packs: PublicHomeworkPack[]; homeworkMode: HomeworkMode }>(
     await fetch("/api/packs", { cache: "no-store" }),
@@ -126,7 +133,7 @@ export async function extractHomeworkRequest(input: {
 }
 
 export async function generateHomeworkRequest(notes: ExtractedNotes) {
-  return parse<{ mode: HomeworkMode; pack: PublicHomeworkPack }>(
+  return parse<{ mode: HomeworkMode; pack: PublicHomeworkPack; playKit: PlayKit }>(
     await fetch("/api/homework/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

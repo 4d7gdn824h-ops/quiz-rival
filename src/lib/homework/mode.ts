@@ -1,8 +1,26 @@
+import "server-only";
+
 import type { HomeworkMode } from "./types";
 
+const PUBLIC_AI_KEYS = [
+  "NEXT_PUBLIC_XAI_API_KEY",
+  "NEXT_PUBLIC_OPENAI_API_KEY",
+  "NEXT_PUBLIC_ANTHROPIC_API_KEY",
+];
+
+export function assertAiKeysStayServerSide() {
+  for (const name of PUBLIC_AI_KEYS) {
+    if (process.env[name]) {
+      throw new Error(
+        `${name} would send an AI key to the browser. Set XAI_API_KEY on the server only.`,
+      );
+    }
+  }
+}
+
 export function homeworkMode(): HomeworkMode {
-  if (process.env.OPENAI_API_KEY) return "openai";
-  if (process.env.ANTHROPIC_API_KEY) return "anthropic";
+  assertAiKeysStayServerSide();
+  if (process.env.XAI_API_KEY) return "xai";
   return "fixture";
 }
 
@@ -39,4 +57,12 @@ export function isAllowedUpload(file: File) {
     name.endsWith(".md") ||
     name.endsWith(".json")
   );
+}
+
+export function isRasterImage(mime: string, name: string) {
+  const type = mime.toLowerCase();
+  const file = name.toLowerCase();
+  if (type.includes("svg") || file.endsWith(".svg")) return false;
+  if (type.startsWith("image/")) return true;
+  return /\.(png|jpe?g|webp|gif|heic|heif)$/.test(file);
 }

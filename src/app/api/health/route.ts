@@ -1,4 +1,5 @@
 import { PACK_CATALOG } from "@/data/catalog";
+import { multiplayerAvailable } from "@/lib/game/availability";
 import { getStore } from "@/lib/game/store";
 import { homeworkMode } from "@/lib/homework/mode";
 import { listPublicCatalog } from "@/lib/packs/public-catalog";
@@ -11,6 +12,7 @@ export async function GET() {
     packs: listPublicCatalog(),
     builtIn: PACK_CATALOG,
     store: getStore().kind,
+    multiplayer: multiplayerAvailable(),
     homeworkMode: homeworkMode(),
   };
   assertNoQuizSecrets(payload.packs, "packs");

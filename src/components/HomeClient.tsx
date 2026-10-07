@@ -6,7 +6,8 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { PACK_CATALOG } from "@/data/catalog";
 import { listTinyLevels } from "@/data/levels";
 import type { PublicLevel, QuizVariant } from "@/data/types";
-import { createRoom, extractHomeworkRequest, fetchPackCatalog, joinRoom } from "@/lib/client/api";
+import { createRoom, extractHomeworkRequest, fetchPackCatalog, fetchRoomService, joinRoom } from "@/lib/client/api";
+import { writeLocalPlay } from "@/lib/client/local-play";
 import {
   writeHomeworkDraft,
   readTonightPackId,
@@ -17,6 +18,7 @@ import type { PublicHomeworkPack } from "@/lib/homework/types";
 import { normalizeRoomCode } from "@/lib/ids";
 import { toPublicLevel } from "@/lib/public-quiz";
 import { HomeworkScanCard } from "./HomeworkScanCard";
+import { RoomFallback } from "./RoomFallback";
 import { TinyPath } from "./TinyPath";
 
 function asClientPack(item: (typeof PACK_CATALOG)[number]): PublicHomeworkPack {
@@ -38,6 +40,8 @@ export function HomeClient({ initialPackId }: { initialPackId?: string }) {
   const [joinCode, setJoinCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<"create" | "join" | "extract" | null>(null);
+  const [fallback, setFallback] = useState<"create" | "join" | "path" | null>(null);
+  const [fallbackLevelId, setFallbackLevelId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -83,6 +87,21 @@ export function HomeClient({ initialPackId }: { initialPackId?: string }) {
     };
   }, [quizId]);
 
+  function showLocalPlay(anchor: "create" | "join" | "path", levelId: string | null = null) {
+    setError(null);
+    setFallbackLevelId(levelId);
+    setFallback(anchor);
+  }
+
+  async function liveRoomsOpen() {
+    try {
+      const service = await fetchRoomService();
+      return service.multiplayer;
+    } catch {
+      return false;
+    }
+  }
+
   async function openRoom(levelId?: string) {
     const result = await createRoom({
       name,
@@ -103,9 +122,13 @@ export function HomeClient({ initialPackId }: { initialPackId?: string }) {
     setError(null);
     setBusy("create");
     try {
+      if (!(await liveRoomsOpen())) {
+        showLocalPlay("create");
+        return;
+      }
       await openRoom();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not create room");
+    } catch {
+      showLocalPlay("create");
     } finally {
       setBusy(null);
     }
@@ -116,6 +139,10 @@ export function HomeClient({ initialPackId }: { initialPackId?: string }) {
     setError(null);
     setBusy("join");
     try {
+      if (!(await liveRoomsOpen())) {
+        showLocalPlay("join");
+        return;
+      }
       const code = normalizeRoomCode(joinCode);
       const result = await joinRoom({ code, name });
       writeSession({
@@ -124,8 +151,8 @@ export function HomeClient({ initialPackId }: { initialPackId?: string }) {
         name: result.player.name,
       });
       router.push(`/room/${result.player.roomCode}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not join room");
+    } catch {
+      showLocalPlay("join");
     } finally {
       setBusy(null);
     }
@@ -253,6 +280,16 @@ export function HomeClient({ initialPackId }: { initialPackId?: string }) {
         </p>
       </form>
 
+      {fallback === "create" ? (
+        <RoomFallback
+          defaultName={name}
+          quizId={quizId}
+          variant={variant}
+          levels={pathLevels}
+          levelId={fallbackLevelId}
+        />
+      ) : null}
+
       <HomeworkScanCard
         busy={busy === "extract"}
         onFile={(file) => void runExtract({ file })}
@@ -286,10 +323,23 @@ export function HomeClient({ initialPackId }: { initialPackId?: string }) {
             onSelect={(levelId) => {
               setError(null);
               setBusy("create");
-              void openRoom(levelId)
-                .catch((err) => {
-                  setError(err instanceof Error ? err.message : "Could not create room");
-                })
+              void (async () => {
+                if (!(await liveRoomsOpen())) {
+                  const first = name.trim() || "Player 1";
+                  writeLocalPlay({
+                    mode: "solo",
+                    quizId,
+                    variant,
+                    levelId,
+                    names: [first, "Player 2"],
+                    startedAt: Date.now(),
+                  });
+                  router.push("/play");
+                  return;
+                }
+                await openRoom(levelId);
+              })()
+                .catch(() => showLocalPlay("path", levelId))
                 .finally(() => setBusy(null));
             }}
           />
@@ -298,6 +348,16 @@ export function HomeClient({ initialPackId }: { initialPackId?: string }) {
             Already-cleared nodes stay open.
           </p>
         </section>
+      ) : null}
+
+      {fallback === "path" ? (
+        <RoomFallback
+          defaultName={name}
+          quizId={quizId}
+          variant={variant}
+          levels={pathLevels}
+          levelId={fallbackLevelId}
+        />
       ) : null}
 
       <form onSubmit={onJoin} className="card space-y-4">
@@ -321,6 +381,16 @@ export function HomeClient({ initialPackId }: { initialPackId?: string }) {
           {busy === "join" ? "Joining…" : "Join room"}
         </button>
       </form>
+
+      {fallback === "join" ? (
+        <RoomFallback
+          defaultName={name}
+          quizId={quizId}
+          variant={variant}
+          levels={pathLevels}
+          levelId={fallbackLevelId}
+        />
+      ) : null}
 
       <p className="pb-6 text-center text-sm text-white/45">
         Parent?{" "}

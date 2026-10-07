@@ -1,5 +1,6 @@
 import "server-only";
 
+import { createHash } from "crypto";
 import { LEVELS } from "@/data/levels";
 import { getPack } from "@/data/quizzes";
 import type { Level, QuizPackFile, QuizQuestion, QuizVariant } from "@/data/types";
@@ -13,11 +14,10 @@ import { saveGeneratedPack } from "./registry";
 import type { ExtractedNotes, GeneratedHomeworkPack, HomeworkMode } from "./types";
 import { parseJsonObject } from "./vision";
 import { writingFromNotes } from "./writing-from-notes";
+import { xaiComplete } from "./xai";
 
-export async function generateHomeworkPack(
-  rawNotes: ExtractedNotes,
-): Promise<GeneratedHomeworkPack> {
-  const notes = notesFromKeptLines({
+export function prepareNotes(rawNotes: ExtractedNotes): ExtractedNotes {
+  return notesFromKeptLines({
     ...rawNotes,
     language: normalizeQuizLanguage(
       rawNotes.language && rawNotes.language !== "und" ? rawNotes.language : undefined,
@@ -26,45 +26,89 @@ export async function generateHomeworkPack(
       ),
     ),
   });
+}
+
+/** Same pack every time for these notes, so scoring does not need a saved upload. */
+export function fixturePackFromNotes(rawNotes: ExtractedNotes): {
+  notes: ExtractedNotes;
+  pack: QuizPackFile;
+  levels: Level[];
+} {
+  const notes = prepareNotes(rawNotes);
   if (!notes.topics.length && !notes.facts.length) {
     throw new GameError("Keep at least a few topics or facts, then generate.", 400);
   }
+  const id = deterministicPackId(notes);
+  if (looksLikeChlopi(notes)) {
+    return { notes, ...cloneChlopiPack(id, notes) };
+  }
+  return { notes, ...buildDeterministicPack(id, notes) };
+}
 
-  const id = randomId("hw");
+export async function generateHomeworkPack(
+  rawNotes: ExtractedNotes,
+): Promise<GeneratedHomeworkPack> {
   const mode = homeworkMode();
+  const prepared = prepareNotes(rawNotes);
+  let notes = prepared;
   let pack: QuizPackFile;
   let levels: Level[];
   let usedMode: HomeworkMode = "fixture";
 
-  if (looksLikeChlopi(notes)) {
-    ({ pack, levels } = cloneChlopiPack(id, notes));
-    usedMode = "fixture";
-  } else if (mode !== "fixture") {
+  if (mode === "xai" && !looksLikeChlopi(prepared)) {
     try {
-      const generated = await generateWithLlm(id, notes, mode);
+      const generated = await generateWithLlm(randomId("hw"), prepared);
       pack = generated.pack;
       levels = generated.levels;
-      usedMode = mode;
+      usedMode = "xai";
     } catch {
-      ({ pack, levels } = buildDeterministicPack(id, notes));
+      ({ notes, pack, levels } = fixturePackFromNotes(rawNotes));
       usedMode = "fixture";
     }
   } else {
-    ({ pack, levels } = buildDeterministicPack(id, notes));
+    ({ notes, pack, levels } = fixturePackFromNotes(rawNotes));
   }
 
   validatePack(pack, levels);
   const generated: GeneratedHomeworkPack = {
-    id,
+    id: pack.id,
     pack,
     levels,
-    writing: writingFromNotes(id, notes),
+    writing: writingFromNotes(pack.id, notes),
     notes,
     mode: usedMode,
     createdAt: Date.now(),
   };
-  saveGeneratedPack(generated);
+  saveGeneratedPack(withoutUpload(generated));
   return generated;
+}
+
+function withoutUpload(pack: GeneratedHomeworkPack): GeneratedHomeworkPack {
+  return {
+    ...pack,
+    notes: {
+      title: pack.notes.title,
+      language: pack.notes.language,
+      topics: [],
+      facts: [],
+      essayPrompts: [],
+      rawText: "",
+      lines: [],
+    },
+  };
+}
+
+function deterministicPackId(notes: ExtractedNotes) {
+  const body = JSON.stringify({
+    fixtureId: notes.fixtureId ?? "",
+    title: notes.title,
+    language: notes.language,
+    topics: notes.topics,
+    facts: notes.facts,
+    kept: notes.lines.filter((line) => line.keep).map((line) => line.text),
+    raw: notes.rawText,
+  });
+  return `hw${createHash("sha256").update(body).digest("hex").slice(0, 12)}`;
 }
 
 function looksLikeChlopi(notes: ExtractedNotes) {
@@ -248,7 +292,6 @@ function mcQuestion(
 async function generateWithLlm(
   id: string,
   notes: ExtractedNotes,
-  mode: HomeworkMode,
 ): Promise<{ pack: QuizPackFile; levels: Level[] }> {
   const prompt = `Create a sibling-rivalry quiz pack from confirmed homework notes.
 Kids must practice — do NOT write the essay for them, and do NOT dump worksheet answer-key short answers as student-facing explanations.
@@ -274,8 +317,7 @@ Facts: ${notes.facts.join(" | ")}
 Essay prompts (do not answer them): ${notes.essayPrompts.join(" | ")}
 Kept text: ${notes.rawText.slice(0, 4000)}`;
 
-  const raw =
-    mode === "openai" ? await completeOpenAI(prompt) : await completeAnthropic(prompt);
+  const raw = await xaiComplete({ content: prompt, temperature: 0.4 });
   const parsed = parseJsonObject(raw) as {
     title?: string;
     language?: string;
@@ -322,7 +364,7 @@ Kept text: ${notes.rawText.slice(0, 4000)}`;
     id,
     title: String(parsed.title || notes.title).trim() || notes.title,
     language,
-    source: "Homework scan · LLM",
+    source: "Homework scan · xAI",
     variants: { A: questionsA, B: questionsB },
   };
   const levels: Level[] = [
@@ -364,57 +406,6 @@ function fromLlmQuestion(id: string, item: LlmQuestion): QuizQuestion {
     correctOptionId: options[correctIndex].id,
     parentHint: String(item.parentHint || "").trim() || "See the confirmed worksheet notes.",
   };
-}
-
-async function completeOpenAI(prompt: string) {
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) throw new Error("OPENAI_API_KEY missing");
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: process.env.OPENAI_TEXT_MODEL || "gpt-4o-mini",
-      temperature: 0.4,
-      response_format: { type: "json_object" },
-      messages: [{ role: "user", content: prompt }],
-    }),
-  });
-  if (!response.ok) {
-    throw new Error(`OpenAI generate failed (${response.status})`);
-  }
-  const body = (await response.json()) as {
-    choices?: { message?: { content?: string } }[];
-  };
-  return body.choices?.[0]?.message?.content ?? "";
-}
-
-async function completeAnthropic(prompt: string) {
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) throw new Error("ANTHROPIC_API_KEY missing");
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "x-api-key": key,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model: process.env.ANTHROPIC_TEXT_MODEL || "claude-sonnet-4-5",
-      max_tokens: 5000,
-      temperature: 0.4,
-      messages: [{ role: "user", content: prompt }],
-    }),
-  });
-  if (!response.ok) {
-    throw new Error(`Anthropic generate failed (${response.status})`);
-  }
-  const body = (await response.json()) as {
-    content?: { type?: string; text?: string }[];
-  };
-  return body.content?.find((part) => part.type === "text")?.text ?? "";
 }
 
 function validatePack(pack: QuizPackFile, levels: Level[]) {
