@@ -13,6 +13,8 @@ interface RoomRow {
   host_id: string;
   current_question_index: number;
   question_ends_at: string | null;
+  paused?: boolean | null;
+  paused_remaining_ms?: number | null;
   question_order: number[];
   playlist_id?: PlaylistId | null;
   level_id?: string | null;
@@ -45,6 +47,9 @@ function toRoom(row: RoomRow): Room {
     questionEndsAt: row.question_ends_at
       ? new Date(row.question_ends_at).getTime()
       : null,
+    paused: Boolean(row.paused),
+    pausedRemainingMs:
+      typeof row.paused_remaining_ms === "number" ? row.paused_remaining_ms : null,
     questionOrder: row.question_order ?? [],
     playlistId: row.playlist_id === "tiny" ? "tiny" : DEFAULT_PLAYLIST_ID,
     levelId: row.level_id ?? null,
@@ -162,6 +167,8 @@ function toRoomRow(room: Room) {
     question_ends_at: room.questionEndsAt
       ? new Date(room.questionEndsAt).toISOString()
       : null,
+    paused: Boolean(room.paused),
+    paused_remaining_ms: room.paused ? (room.pausedRemainingMs ?? 0) : null,
     question_order: room.questionOrder,
     playlist_id: room.playlistId ?? DEFAULT_PLAYLIST_ID,
     level_id: room.levelId ?? null,

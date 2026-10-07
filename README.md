@@ -17,7 +17,7 @@ Two phones on the same Wi-Fi, or **two browser windows** (even in one profile). 
 
 1. **Create room (host)** — enter a display name, pick a pack (`Chłopi (PL)`, `Warm-up (EN)`, or **Tonight’s pack** after a scan), pick variant **A** or **B**, tap **Create room**. You get a **4-letter code**.
 2. **Join room** — sibling enters the same name field + the 4-letter code, tap **Join room**.
-3. Host taps **Start**. Every question has a shared **25 second** countdown (`QUESTION_SECONDS` in `src/lib/constants.ts`).
+3. Host taps **Start**. Every question has a shared **25 second** countdown (`QUESTION_SECONDS` in `src/lib/constants.ts`). Either player can tap **Pause** to freeze that clock and lock answers; **Resume** continues the same question without resetting scores.
 4. Each device answers independently. The live scoreboard updates; student screens never show keys or English parent hints.
 5. After the last question: **winner screen**. Host taps **Rematch** (same room, switches A↔B and reshuffles).
 6. Parents can open `/parent/key` (also linked from the host winner screen) for keys + English hints.
@@ -80,6 +80,7 @@ Scaffold for the Klasa 8 *Chłopi* problem question (~100 words). **No auto-full
 ## Quiz play UX
 
 - Each question card has **Czytaj** (Polish packs) or **Read** (other languages). It reads the stem, plus options when they are short. Same Web Speech API; **Stop** cancels. Prefers a matching voice for the pack language (pl-PL, en-US, es-ES, fr-FR, …), then the default.
+- **Pause** sits on every question (variants A and B, both seats). It freezes the shared timer, blocks answers, and shows **Paused** with **Resume**. Leave room stays available. Progress and scores stay put.
 
 Short-answer worksheet items were converted to multiple choice so auto-score is reliable.
 
@@ -93,7 +94,7 @@ Short-answer worksheet items were converted to multiple choice so auto-score is 
 ### Plug in Supabase
 
 1. Create a Supabase project.
-2. Run `supabase/schema.sql` in the SQL editor (creates `rooms`, `players`, `answers` + open RLS for this no-auth MVP).
+2. Run `supabase/schema.sql` in the SQL editor (creates `rooms`, `players`, `answers` + open RLS for this no-auth MVP). Existing projects also need the `paused` and `paused_remaining_ms` alters in that file.
 3. Copy `.env.example` to `.env.local`:
 
 ```bash
