@@ -50,6 +50,7 @@ export async function extractWithVision(input: {
   const text = await xaiComplete({
     temperature: 0.2,
     maxTokens: 2048,
+    kind: "vision",
     content: [
       {
         type: "text",
