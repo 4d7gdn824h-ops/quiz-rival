@@ -1,4 +1,5 @@
 import { HomeClient } from "@/components/HomeClient";
+import { PracticeBanner } from "@/components/PracticeBanner";
 
 export default async function Home({
   searchParams,
@@ -6,5 +7,10 @@ export default async function Home({
   searchParams: Promise<{ pack?: string }>;
 }) {
   const query = await searchParams;
-  return <HomeClient initialPackId={query.pack} />;
+  return (
+    <>
+      <PracticeBanner />
+      <HomeClient initialPackId={query.pack} />
+    </>
+  );
 }

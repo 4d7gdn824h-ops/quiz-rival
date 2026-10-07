@@ -3,11 +3,10 @@ import "server-only";
 import { GameError } from "@/lib/game/engine";
 import { randomId } from "@/lib/ids";
 import { getFixtureMeta, getFixtureNotes, emptyPasteNotes, notesFromRawText } from "./fixture";
-import { extractLocalNotes } from "./local-text";
-import { homeworkMode, isAllowedUpload, MAX_UPLOAD_BYTES } from "./mode";
-import { saveExtract } from "./registry";
+import { extractLocalNotes, extractLocalText } from "./local-text";
+import { homeworkMode, isAllowedUpload, isRasterImage, MAX_UPLOAD_BYTES } from "./mode";
 import type { ExtractedNotes, HomeworkExtract } from "./types";
-import { extractWithVision } from "./vision";
+import { extractWithVision, structureWorksheetText } from "./vision";
 
 export async function extractHomework(input: {
   file?: File | null;
@@ -20,7 +19,7 @@ export async function extractHomework(input: {
   const mode = homeworkMode();
 
   if (input.pasteDemo && !input.file && !input.rawText?.trim()) {
-    return save({
+    return finish({
       notes: emptyPasteNotes(input.title?.trim() || "Tonight's homework"),
       mode: "fixture",
       notice:
@@ -29,11 +28,11 @@ export async function extractHomework(input: {
   }
 
   if (input.rawText?.trim() && !input.file) {
-    return save({
+    return finish({
       notes: notesFromRawText(input.rawText, { title: input.title }),
       mode: "fixture",
       notice:
-        "Built notes from the text you pasted (no vision model). Confirm the language and lines — this is not the Chłopi demo unless that is what you pasted.",
+        "Built notes from the text you pasted. Confirm the language and lines. The pasted text is not saved on the server.",
     });
   }
 
@@ -43,7 +42,7 @@ export async function extractHomework(input: {
     try {
       const notes = getFixtureNotes(fixtureId);
       const meta = getFixtureMeta(notes.fixtureId || fixtureId);
-      return save({
+      return finish({
         notes,
         mode: "fixture",
         notice: `Loaded the ${meta?.title ?? notes.title} demo worksheet (${notes.language}). Fixture mode — not a live vision read.`,
@@ -65,58 +64,105 @@ export async function extractHomework(input: {
   }
 
   const bytes = Buffer.from(await file.arrayBuffer());
-  const mime = file.type || guessMime(file.name);
-  const titleHint = file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ");
+  try {
+    const mime = file.type || guessMime(file.name);
+    const titleHint = file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ");
+    return await readFile({ bytes, mime, filename: file.name, titleHint, mode });
+  } finally {
+    bytes.fill(0);
+  }
+}
 
-  if (mode !== "fixture") {
-    try {
-      const result = await extractWithVision({
-        bytes,
-        mime,
-        filename: file.name,
-      });
-      return save({
-        notes: result.notes,
-        mode: result.mode,
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Could not read that scan";
-      throw new GameError(message, 502);
+async function readFile(input: {
+  bytes: Buffer;
+  mime: string;
+  filename: string;
+  titleHint: string;
+  mode: HomeworkExtract["mode"];
+}): Promise<HomeworkExtract> {
+  if (input.mode === "xai") {
+    if (isRasterImage(input.mime, input.filename)) {
+      try {
+        const result = await extractWithVision({
+          bytes: input.bytes,
+          mime: input.mime,
+          filename: input.filename,
+        });
+        return finish({ notes: result.notes, mode: "xai" });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Could not read that scan";
+        throw new GameError(message, 502);
+      }
     }
+
+    const localText = extractLocalText({
+      bytes: input.bytes,
+      mime: input.mime,
+      filename: input.filename,
+    });
+    if (localText && localText.replace(/\s+/g, " ").trim().length >= 24) {
+      try {
+        const notes = await structureWorksheetText(localText, input.titleHint);
+        return finish({ notes, mode: "xai" });
+      } catch (error) {
+        const local = extractLocalNotes({
+          bytes: input.bytes,
+          mime: input.mime,
+          filename: input.filename,
+        });
+        if (local) {
+          return finish({
+            notes: { ...local, title: local.title || input.titleHint },
+            mode: "fixture",
+            notice:
+              "xAI could not be reached, so the text inside the file was used instead. The file was not saved.",
+          });
+        }
+        const message = error instanceof Error ? error.message : "Could not read that scan";
+        throw new GameError(message, 502);
+      }
+    }
+
+    throw new GameError(
+      "That PDF has no text we can read without saving the file. Take a JPEG or PNG photo of the page, or paste the lines.",
+      400,
+    );
   }
 
-  const local = extractLocalNotes({ bytes, mime, filename: file.name });
+  const local = extractLocalNotes({
+    bytes: input.bytes,
+    mime: input.mime,
+    filename: input.filename,
+  });
   if (local) {
-    return save({
-      notes: { ...local, title: local.title || titleHint },
+    return finish({
+      notes: { ...local, title: local.title || input.titleHint },
       mode: "fixture",
       notice:
-        "No vision API key — built notes from text inside the file (SVG/PDF/plain text, not photo OCR). Confirm language and lines. This is not the Chłopi demo unless that page was Chłopi.",
+        "No XAI_API_KEY — built notes from text inside the file (SVG/PDF/plain text, not photo OCR). The file was not saved. This is not the Chłopi demo unless that page was Chłopi.",
     });
   }
 
-  return save({
-    notes: emptyPasteNotes(titleHint || "Tonight's homework"),
+  return finish({
+    notes: emptyPasteNotes(input.titleHint || "Tonight's homework"),
     mode: "fixture",
     notice:
-      "No OPENAI_API_KEY or ANTHROPIC_API_KEY — the photo was not sent to a model and was not treated as Chłopi. Paste or edit the worksheet lines (any language), then generate. Or pick a demo worksheet.",
+      "No XAI_API_KEY — the photo was not sent to a model and was not saved. Paste or edit the worksheet lines (any language), then generate. Or pick a demo worksheet.",
   });
 }
 
-function save(input: {
+function finish(input: {
   notes: ExtractedNotes;
   mode: HomeworkExtract["mode"];
   notice?: string;
 }): HomeworkExtract {
-  const extract: HomeworkExtract = {
+  return {
     id: randomId("ex"),
     notes: input.notes,
     mode: input.mode,
     notice: input.notice,
     createdAt: Date.now(),
   };
-  saveExtract(extract);
-  return extract;
 }
 
 function guessMime(name: string) {

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { extractHomeworkRequest, generateHomeworkRequest } from "@/lib/client/api";
+import { writeLocalPlay, writePlayKit } from "@/lib/client/local-play";
 import {
   readHomeworkDraft,
   writeHomeworkDraft,
@@ -81,6 +82,7 @@ export function HomeworkClient() {
     try {
       persist(kept);
       const result = await generateHomeworkRequest(kept);
+      writePlayKit(result.playKit);
       writeTonightPackId(result.pack.id);
       setPackId(result.pack.id);
       setPackTitle(result.pack.title);
@@ -159,11 +161,24 @@ export function HomeworkClient() {
             Create room / Rematch. Host picks A/B there.
           </p>
           {pathLevels.length ? (
-            <TinyPath levels={pathLevels} completedIds={[]} disabled />
+            <TinyPath
+              levels={pathLevels}
+              completedIds={[]}
+              onSelect={(levelId) => startPractice("solo", levelId)}
+            />
           ) : null}
+          <p className="text-xs text-white/45">
+            Tap a node to practice that stop on this phone. Answer keys stay hidden.
+          </p>
           <Link className="btn-primary flex items-center justify-center" href={`/?pack=${packId}`}>
             Create room
           </Link>
+          <button type="button" className="btn-secondary" onClick={() => startPractice("pass", null)}>
+            Take turns on this phone
+          </button>
+          <button type="button" className="btn-secondary" onClick={() => startPractice("solo", null)}>
+            Practice the whole pack
+          </button>
           <button
             type="button"
             className="text-sm text-white/55 underline underline-offset-4"
@@ -182,6 +197,19 @@ export function HomeworkClient() {
       </Link>
     </main>
   );
+
+  function startPractice(mode: "solo" | "pass", levelId: string | null) {
+    if (!packId) return;
+    writeLocalPlay({
+      mode,
+      quizId: packId,
+      variant: "A",
+      levelId,
+      names: ["You", "Player 2"],
+      startedAt: Date.now(),
+    });
+    router.push("/play");
+  }
 }
 
 function ConfirmForm({

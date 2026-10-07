@@ -4,6 +4,11 @@
   --background: #0c1022;
   --foreground: #f4efe6;
   --card: rgba(255, 255, 255, 0.06);
+  /* Practice banner. Restyle from this block only. */
+  --banner-bg: rgba(190, 255, 120, 0.16);
+  --banner-fg: #f3ffe4;
+  --banner-size: clamp(8px, 2.45vw, 0.8rem);
+  --banner-pad: 0.4rem 0.5rem;
 }
 
 @theme inline {
@@ -15,6 +20,19 @@
 
 html {
   background: var(--background);
+}
+
+.practice-banner {
+  margin: 0;
+  width: 100%;
+  background: var(--banner-bg);
+  color: var(--banner-fg);
+  font-size: var(--banner-size);
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  text-align: center;
+  white-space: nowrap;
+  padding: var(--banner-pad);
 }
 
 body {

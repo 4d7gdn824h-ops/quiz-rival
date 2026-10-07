@@ -1,4 +1,5 @@
 import { getStore } from "@/lib/game/store";
+import { multiplayerAvailable } from "@/lib/game/availability";
 import { jsonError } from "@/lib/game/http";
 import { toSnapshot } from "@/lib/game/snapshot";
 import type { PlaylistId, QuizVariant } from "@/data/types";
@@ -35,6 +36,7 @@ export async function POST(request: Request) {
 export async function GET() {
   return Response.json({
     store: getStore().kind,
+    multiplayer: multiplayerAvailable(),
     ok: true,
   });
 }

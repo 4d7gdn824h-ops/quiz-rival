@@ -12,6 +12,7 @@ import { readSession, writeSession } from "@/lib/client/session";
 import { cancelSpeech, questionSpeechText, readAloudIdleLabel } from "@/lib/client/speech";
 import type { RoomSnapshot } from "@/lib/game/types";
 import { ReadAloudButton } from "./ReadAloudButton";
+import { RoomFallback } from "./RoomFallback";
 import { Scoreboard, seatYouVsThem } from "./Scoreboard";
 import { TimerBar } from "./TimerBar";
 import { TinyPath } from "./TinyPath";
@@ -24,6 +25,7 @@ export function RoomClient({ code }: { code: string }) {
   const [needJoin, setNeedJoin] = useState(false);
   const [busy, setBusy] = useState(false);
   const [ready, setReady] = useState(false);
+  const [connectionLost, setConnectionLost] = useState(false);
   const pauseButtonRef = useRef<HTMLButtonElement>(null);
   const resumeButtonRef = useRef<HTMLButtonElement>(null);
   const wasPausedRef = useRef(false);
@@ -52,10 +54,8 @@ export function RoomClient({ code }: { code: string }) {
         } else {
           setNeedJoin(true);
         }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Room not found");
-        }
+      } catch {
+        if (!cancelled) setConnectionLost(true);
       } finally {
         if (!cancelled) setReady(true);
       }
@@ -67,10 +67,17 @@ export function RoomClient({ code }: { code: string }) {
 
   useEffect(() => {
     if (!ready || needJoin) return;
+    let cancelled = false;
     const poll = window.setInterval(() => {
       void fetchSnapshot(code, playerId ?? undefined)
-        .then(applySnap)
-        .catch(() => undefined);
+        .then((snap) => {
+          if (cancelled) return;
+          applySnap(snap);
+          setConnectionLost(false);
+        })
+        .catch(() => {
+          if (!cancelled) setConnectionLost(true);
+        });
     }, POLL_MS);
 
     let source: EventSource | null = null;
@@ -78,14 +85,33 @@ export function RoomClient({ code }: { code: string }) {
       const qs = playerId ? `?playerId=${encodeURIComponent(playerId)}` : "";
       source = new EventSource(`/api/rooms/${code}/events${qs}`);
       source.onmessage = (event) => {
+        if (cancelled) return;
         const data = JSON.parse(event.data) as RoomSnapshot & { error?: string };
-        if (!data.error && data.room) applySnap(data);
+        if (data.error || !data.room) {
+          setConnectionLost(true);
+          return;
+        }
+        applySnap(data);
+        setConnectionLost(false);
+      };
+      source.onerror = () => {
+        if (cancelled) return;
+        void fetchSnapshot(code, playerId ?? undefined)
+          .then((snap) => {
+            if (cancelled) return;
+            applySnap(snap);
+            setConnectionLost(false);
+          })
+          .catch(() => {
+            if (!cancelled) setConnectionLost(true);
+          });
       };
     } catch {
       /* polling still runs */
     }
 
     return () => {
+      cancelled = true;
       window.clearInterval(poll);
       source?.close();
     };
@@ -137,8 +163,8 @@ export function RoomClient({ code }: { code: string }) {
       setPlayerId(result.player.id);
       setNeedJoin(false);
       applySnap(result.snapshot);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not join");
+    } catch {
+      setConnectionLost(true);
     } finally {
       setBusy(false);
     }
@@ -240,13 +266,16 @@ export function RoomClient({ code }: { code: string }) {
     );
   }
 
-  if (error && !snapshot) {
+  if ((connectionLost || error) && !snapshot) {
     return (
-      <main className="mx-auto flex max-w-md flex-1 flex-col justify-center gap-4 px-4">
-        <p className="rounded-2xl bg-red-500/15 px-4 py-3 text-red-200" role="alert">
-          {error}
-        </p>
-        <Link className="btn-secondary text-center" href="/">
+      <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-4 px-4 py-8">
+        <RoomFallback
+          defaultName={name}
+          quizId="chlopi"
+          variant="A"
+          message="This live room isn’t connected. Play on this phone instead."
+        />
+        <Link className="text-center text-sm text-white/45 underline underline-offset-4" href="/">
           Back home
         </Link>
       </main>
@@ -269,6 +298,14 @@ export function RoomClient({ code }: { code: string }) {
               maxLength={16}
             />
           </label>
+          {connectionLost ? (
+            <RoomFallback
+              defaultName={name}
+              quizId="chlopi"
+              variant="A"
+              message="Couldn’t join that room. Play on this phone instead."
+            />
+          ) : null}
           {error ? <p className="text-sm text-red-200">{error}</p> : null}
           <button className="btn-primary" disabled={busy} type="submit">
             {busy ? "Joining…" : "Join"}
@@ -300,6 +337,17 @@ export function RoomClient({ code }: { code: string }) {
           <p>Variant {snapshot.room.variant}</p>
         </div>
       </header>
+
+      {connectionLost ? (
+        <RoomFallback
+          defaultName={you?.name || name}
+          quizId={snapshot.room.quizId}
+          variant={snapshot.room.variant}
+          levels={snapshot.levels}
+          levelId={snapshot.room.levelId}
+          message="The live room disconnected. Keep playing on this phone."
+        />
+      ) : null}
 
       {error ? (
         <p className="rounded-2xl bg-red-500/15 px-4 py-3 text-sm text-red-200" role="alert">
