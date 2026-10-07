@@ -7,6 +7,7 @@ import "server-only";
  */
 
 import type { ExtractedNotes } from "./types";
+import { HomeworkError } from "./errors";
 import { asLines } from "./lines";
 import { detectLanguage, normalizeQuizLanguage } from "./language";
 import { xaiComplete } from "./xai";
@@ -30,25 +31,36 @@ Rules:
 - Keep the original language of the worksheet in title, topics, facts, prompts, rawText, lines.`;
 
 export async function extractWithVision(input: {
-  bytes: Buffer;
-  mime: string;
-  filename: string;
+  images: { bytes: Buffer; mime: string }[];
 }): Promise<{ notes: ExtractedNotes; mode: "xai" }> {
   if (!process.env.XAI_API_KEY) {
-    throw new Error("No vision API key configured");
+    throw new HomeworkError("No vision API key configured", "unreadable", 500);
   }
-  if (input.mime === "application/pdf" || input.filename.toLowerCase().endsWith(".pdf")) {
-    throw new Error(
-      "Photograph the page as a JPEG or PNG. We do not upload PDF files to xAI storage.",
+  const images = input.images.slice(0, 10).filter((image) => image.bytes.length > 0);
+  if (!images.length) {
+    throw new HomeworkError("We couldn't read that page. Try a sharper photo in good light.", "unreadable", 422);
+  }
+  if (images.some((image) => image.mime === "application/pdf")) {
+    throw new HomeworkError(
+      "We couldn't read that page. Try a sharper photo in good light.",
+      "unreadable",
+      422,
     );
   }
-  const mime = input.mime || "image/jpeg";
-  const dataUrl = `data:${mime};base64,${input.bytes.toString("base64")}`;
   const text = await xaiComplete({
     temperature: 0.2,
+    maxTokens: 2048,
     content: [
-      { type: "text", text: EXTRACT_INSTRUCTIONS },
-      { type: "image_url", image_url: { url: dataUrl } },
+      {
+        type: "text",
+        text: `${EXTRACT_INSTRUCTIONS}\nThe images are consecutive pages of one worksheet, in order. Combine them into one set of notes.`,
+      },
+      ...images.map((image) => ({
+        type: "image_url",
+        image_url: {
+          url: `data:${image.mime || "image/jpeg"};base64,${image.bytes.toString("base64")}`,
+        },
+      })),
     ],
   });
   return { notes: notesFromModelText(text), mode: "xai" };
@@ -61,6 +73,7 @@ export async function structureWorksheetText(
   const clipped = rawText.slice(0, 12000);
   const text = await xaiComplete({
     temperature: 0.2,
+    maxTokens: 2048,
     content: `${EXTRACT_INSTRUCTIONS}\n\nWorksheet title hint: ${titleHint || "Tonight's homework"}\n\nWorksheet text:\n${clipped}`,
   });
   return notesFromModelText(text);
@@ -93,7 +106,11 @@ function notesFromModelText(text: string): ExtractedNotes {
   const blob = `${parsed.title ?? ""}\n${topics.join(" ")}\n${facts.join(" ")}\n${rawText}`;
   const language = normalizeQuizLanguage(parsed.language, detectLanguage(blob));
   if (!topics.length && !facts.length && !rawText && !lines.length) {
-    throw new Error("xAI returned empty notes");
+    throw new HomeworkError(
+      "We couldn't read that page. Try a sharper photo in good light.",
+      "unreadable",
+      422,
+    );
   }
   const kept = lines.filter((line) => line.keep).map((line) => line.text);
   return {

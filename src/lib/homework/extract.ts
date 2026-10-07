@@ -2,6 +2,7 @@ import "server-only";
 
 import { GameError } from "@/lib/game/engine";
 import { randomId } from "@/lib/ids";
+import { HomeworkError } from "./errors";
 import { getFixtureMeta, getFixtureNotes, emptyPasteNotes, notesFromRawText } from "./fixture";
 import { extractLocalNotes, extractLocalText } from "./local-text";
 import { homeworkMode, isAllowedUpload, isRasterImage, MAX_UPLOAD_BYTES } from "./mode";
@@ -10,11 +11,13 @@ import { extractWithVision, structureWorksheetText } from "./vision";
 
 export async function extractHomework(input: {
   file?: File | null;
+  files?: File[] | null;
   fixtureId?: string;
   forceFixture?: boolean;
   pasteDemo?: boolean;
   rawText?: string;
   title?: string;
+  source?: string;
 }): Promise<HomeworkExtract> {
   const mode = homeworkMode();
 
@@ -27,7 +30,15 @@ export async function extractHomework(input: {
     });
   }
 
-  if (input.rawText?.trim() && !input.file) {
+  const uploads = (input.files?.length ? input.files : input.file ? [input.file] : []).filter(
+    (file) => file.size > 0,
+  );
+
+  if (input.rawText?.trim() && !uploads.length && input.source === "pdf-text") {
+    return readPdfText(input.rawText, input.title, mode);
+  }
+
+  if (input.rawText?.trim() && !uploads.length) {
     return finish({
       notes: notesFromRawText(input.rawText, { title: input.title }),
       mode: "fixture",
@@ -36,7 +47,7 @@ export async function extractHomework(input: {
     });
   }
 
-  const wantNamedFixture = Boolean(input.fixtureId || (input.forceFixture && !input.file));
+  const wantNamedFixture = Boolean(input.fixtureId || (input.forceFixture && !uploads.length));
   if (wantNamedFixture) {
     const fixtureId = input.fixtureId || "chlopi-worksheet";
     try {
@@ -52,17 +63,27 @@ export async function extractHomework(input: {
     }
   }
 
-  const file = input.file;
-  if (!file) {
-    throw new GameError("Choose a photo or PDF, pick a demo worksheet, or paste the page text.", 400);
+  if (!uploads.length) {
+    throw new HomeworkError(
+      "Choose a photo or PDF, pick a demo worksheet, or paste the page text.",
+      "file_type",
+      400,
+    );
   }
-  if (file.size > MAX_UPLOAD_BYTES) {
-    throw new GameError("That file is over 8 MB. Photograph one page at a time.", 413);
+  const total = uploads.reduce((sum, file) => sum + file.size, 0);
+  if (uploads.some((file) => file.size > MAX_UPLOAD_BYTES) || total > MAX_UPLOAD_BYTES) {
+    throw new HomeworkError("That file's too big.", "file_too_big", 413);
   }
-  if (!isAllowedUpload(file)) {
-    throw new GameError("Use a photo (JPEG/PNG/WebP), an SVG, or a PDF.", 400);
+  if (uploads.some((file) => !isAllowedUpload(file))) {
+    throw new HomeworkError("That file won't work. Try a photo or a PDF.", "file_type", 400);
   }
 
+  const images = uploads.filter((file) => isRasterImage(file.type || guessMime(file.name), file.name));
+  if (images.length === uploads.length) {
+    return readImages(images.slice(0, 10), mode);
+  }
+
+  const file = uploads[0];
   const bytes = Buffer.from(await file.arrayBuffer());
   try {
     const mime = file.type || guessMime(file.name);
@@ -71,6 +92,77 @@ export async function extractHomework(input: {
   } finally {
     bytes.fill(0);
   }
+}
+
+async function readPdfText(
+  rawText: string,
+  title: string | undefined,
+  mode: HomeworkExtract["mode"],
+): Promise<HomeworkExtract> {
+  const local = notesFromRawText(rawText, { title });
+  if (mode !== "xai") {
+    return finish({
+      notes: local,
+      mode: "fixture",
+      notice:
+        "Built notes from the text in the PDF. Confirm the language and lines. The file was not saved.",
+    });
+  }
+  try {
+    const notes = await structureWorksheetText(rawText, title);
+    return finish({ notes, mode: "xai" });
+  } catch (error) {
+    if (local.topics.length || local.facts.length) {
+      return finish({
+        notes: local,
+        mode: "fixture",
+        notice:
+          "xAI could not be reached, so the text inside the PDF was used instead. The file was not saved.",
+      });
+    }
+    throw asReadError(error);
+  }
+}
+
+async function readImages(files: File[], mode: HomeworkExtract["mode"]): Promise<HomeworkExtract> {
+  const titleHint = files[0].name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ");
+  if (mode !== "xai") {
+    return finish({
+      notes: emptyPasteNotes(titleHint || "Tonight's homework"),
+      mode: "fixture",
+      notice:
+        "No XAI_API_KEY — the photo was not sent to a model and was not saved. Paste or edit the worksheet lines (any language), then generate. Or pick a demo worksheet.",
+    });
+  }
+  const images: { bytes: Buffer; mime: string }[] = [];
+  try {
+    for (const file of files) {
+      images.push({
+        bytes: Buffer.from(await file.arrayBuffer()),
+        mime: file.type || "image/jpeg",
+      });
+    }
+    const result = await extractWithVision({ images });
+    return finish({ notes: result.notes, mode: "xai" });
+  } catch (error) {
+    throw asReadError(error);
+  } finally {
+    for (const image of images) image.bytes.fill(0);
+  }
+}
+
+function asReadError(error: unknown): HomeworkError {
+  if (error instanceof HomeworkError) {
+    if (error.code === "timeout") return error;
+    if (error.code === "unreadable" || error.code === "file_type" || error.code === "file_too_big") {
+      return error;
+    }
+  }
+  return new HomeworkError(
+    "We couldn't read that page. Try a sharper photo in good light.",
+    "unreadable",
+    422,
+  );
 }
 
 async function readFile(input: {
@@ -84,14 +176,11 @@ async function readFile(input: {
     if (isRasterImage(input.mime, input.filename)) {
       try {
         const result = await extractWithVision({
-          bytes: input.bytes,
-          mime: input.mime,
-          filename: input.filename,
+          images: [{ bytes: input.bytes, mime: input.mime || "image/jpeg" }],
         });
         return finish({ notes: result.notes, mode: "xai" });
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Could not read that scan";
-        throw new GameError(message, 502);
+        throw asReadError(error);
       }
     }
 
@@ -123,9 +212,10 @@ async function readFile(input: {
       }
     }
 
-    throw new GameError(
-      "That PDF has no text we can read without saving the file. Take a JPEG or PNG photo of the page, or paste the lines.",
-      400,
+    throw new HomeworkError(
+      "We couldn't read that page. Try a sharper photo in good light.",
+      "unreadable",
+      422,
     );
   }
 

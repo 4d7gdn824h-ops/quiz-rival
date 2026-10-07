@@ -15,6 +15,8 @@ export async function POST(request: Request) {
     let pasteDemo = false;
     let rawText: string | undefined;
     let title: string | undefined;
+    let source: string | undefined;
+    let files: File[] = [];
 
     if (contentType.includes("application/json")) {
       const body = (await request.json()) as {
@@ -24,16 +26,21 @@ export async function POST(request: Request) {
         pasteDemo?: boolean;
         rawText?: string;
         title?: string;
+        source?: string;
       };
       fixtureId = body.fixtureId || body.fixture;
       forceFixture = Boolean(body.forceFixture);
       pasteDemo = Boolean(body.pasteDemo);
       rawText = body.rawText;
       title = body.title;
+      source = body.source;
     } else {
       const form = await request.formData();
+      files = form
+        .getAll("file")
+        .filter((item): item is File => item instanceof File && item.size > 0);
       const maybeFile = form.get("file");
-      file = maybeFile instanceof File && maybeFile.size > 0 ? maybeFile : null;
+      file = maybeFile instanceof File && maybeFile.size > 0 ? maybeFile : files[0] ?? null;
       fixtureId = stringField(form.get("fixtureId") ?? form.get("fixture"));
       forceFixture =
         form.get("forceFixture") === "1" || form.get("forceFixture") === "true";
@@ -41,15 +48,18 @@ export async function POST(request: Request) {
         form.get("pasteDemo") === "1" || form.get("pasteDemo") === "true";
       rawText = stringField(form.get("rawText"));
       title = stringField(form.get("title"));
+      source = stringField(form.get("source"));
     }
 
     const extract = await extractHomework({
       file,
+      files,
       fixtureId,
       forceFixture,
       pasteDemo,
       rawText,
       title,
+      source,
     });
     const payload = {
       id: extract.id,

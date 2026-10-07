@@ -3,13 +3,20 @@ import { withRoomLock } from "@/lib/game/lock";
 import { toSnapshot } from "@/lib/game/snapshot";
 import { getStore } from "@/lib/game/store";
 import type { RoomSnapshot } from "@/lib/game/types";
+import { HomeworkError } from "@/lib/homework/errors";
 
 export async function jsonError(error: unknown) {
+  if (error instanceof HomeworkError) {
+    return Response.json(
+      { error: error.message, code: error.code },
+      { status: error.status },
+    );
+  }
   if (error instanceof GameError) {
     return Response.json({ error: error.message }, { status: error.status });
   }
   const message = error instanceof Error ? error.message : "Unexpected error";
-  return Response.json({ error: message }, { status: 500 });
+  return Response.json({ error: message, code: "unreadable" }, { status: 500 });
 }
 
 export async function loadFreshState(code: string) {
