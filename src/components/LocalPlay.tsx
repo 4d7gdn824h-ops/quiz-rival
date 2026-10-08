@@ -15,6 +15,7 @@ import { questionSpeechText, readAloudIdleLabel } from "@/lib/client/speech";
 import { QUESTION_MS } from "@/lib/constants";
 import { roundFromKit } from "@/lib/play/round-from-kit";
 import type { PublicRound } from "@/lib/play/types";
+import { turnLabel } from "@/lib/copy";
 import { ReadAloudButton } from "./ReadAloudButton";
 import { Scoreboard } from "./Scoreboard";
 import { TimerBar } from "./TimerBar";
@@ -257,8 +258,14 @@ export function LocalPlay() {
         <p className="text-xs uppercase tracking-[0.28em] text-white/50">
           {setup.mode === "pass" ? "Pass and play" : "Tiny path"}
         </p>
-        <h1 className="font-display text-3xl">{round.title}</h1>
-        {round.levelTitle ? <p className="text-sm text-white/60">{round.levelTitle}</p> : null}
+        <h1 className="title-clamp font-display text-3xl" title={round.title} data-testid="quiz-title">
+          {round.title}
+        </h1>
+        {round.levelTitle ? (
+          <p className="title-clamp text-sm text-white/60" title={round.levelTitle}>
+            {round.levelTitle}
+          </p>
+        ) : null}
       </header>
 
       {error ? (
@@ -348,7 +355,9 @@ function QuestionCard({
 }) {
   return (
     <section className="space-y-4">
-      <p className="text-sm font-semibold text-lime-200">{activeName}&apos;s turn</p>
+      <p className="text-sm font-semibold text-lime-200" data-testid="turn-label">
+        {turnLabel(activeName)}
+      </p>
       <TimerBar endsAt={endsAt} frozenRemainingMs={frozenMs} totalMs={QUESTION_MS} />
       {paused ? null : (
         <button type="button" className="btn-secondary" onClick={onPause} disabled={busy}>

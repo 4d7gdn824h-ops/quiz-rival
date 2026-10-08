@@ -11,6 +11,7 @@ import { quizChrome } from "./quiz-chrome";
 import { saveGeneratedPack } from "./registry";
 import type { ExtractedNotes, GeneratedHomeworkPack, HomeworkMode } from "./types";
 import { parseJsonObject } from "./vision";
+import { shortQuizTitle } from "@/lib/copy";
 import { HomeworkError } from "./errors";
 import { xaiComplete } from "./xai";
 
@@ -178,9 +179,10 @@ function buildDeterministicPack(id: string, notes: ExtractedNotes) {
     });
   });
 
+  const title = shortQuizTitle(notes.title, notes.topics);
   const pack: QuizPackFile = {
     id,
-    title: notes.title,
+    title,
     language,
     source: "Homework scan",
     variants: { A: questionsA, B: questionsB },
@@ -189,7 +191,7 @@ function buildDeterministicPack(id: string, notes: ExtractedNotes) {
     {
       id: `${id}-full`,
       packId: id,
-      title: `${notes.title} · full pack`,
+      title: `${title} · full pack`,
       theme: "full-pack",
       mega: true,
       passRule: { type: "complete" },
@@ -248,9 +250,10 @@ async function generateWithLlm(
 Every question must be answerable from those page notes. Infer a fair difficulty from the material. Do not ask the student for a name, grade, or topic list.
 Kids must practice — do NOT write the essay for them, and do NOT dump worksheet answer-key short answers as student-facing explanations.
 Write every student-facing prompt, option, and level title in the worksheet language (${notes.language}). Do not translate the notes into English or Polish unless the worksheet already is that language. Do not coerce language to pl or en.
+The title is a short quiz name of at most 40 characters. Do not copy a long worksheet heading.
 Return JSON:
 {
-  "title": string,
+  "title": "short quiz name, at most 40 characters",
   "language": "BCP-47 / ISO code matching the worksheet",
   "levels": [
     {
@@ -312,9 +315,13 @@ Kept text: ${notes.rawText.slice(0, 4000)}`;
     });
   });
 
+  const title = shortQuizTitle(
+    String(parsed.title || notes.title).trim() || notes.title,
+    notes.topics,
+  );
   const pack: QuizPackFile = {
     id,
-    title: String(parsed.title || notes.title).trim() || notes.title,
+    title,
     language,
     source: "Homework scan · xAI",
     variants: { A: questionsA, B: questionsB },
@@ -323,7 +330,7 @@ Kept text: ${notes.rawText.slice(0, 4000)}`;
     {
       id: `${id}-full`,
       packId: id,
-      title: `${notes.title} · full pack`,
+      title: `${title} · full pack`,
       theme: "full-pack",
       mega: true,
       passRule: { type: "complete" },

@@ -226,7 +226,7 @@ export function HomeClient({ initialPackId }: { initialPackId?: string }) {
                   onChange={() => setQuizId(pack.id)}
                   className="sr-only"
                 />
-                <span className="block font-semibold">
+                <span className="title-clamp block font-semibold" title={pack.title}>
                   {pack.title}
                   {pack.tonight ? (
                     <span className="ml-2 rounded-full bg-lime-300 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-black">

@@ -71,7 +71,7 @@ test("five photos go straight to the quiz; a seventh page is blocked", async ({ 
   await expect(page.getByRole("heading", { name: /Water evaporates from oceans/ })).toBeVisible({
     timeout: 30_000,
   });
-  await expect(page.getByText("You's turn")).toBeVisible();
+  await expect(page.getByText("Your turn")).toBeVisible();
   await expect(page.getByText("Generate tiny path")).toHaveCount(0);
   await expect(page.getByLabel(/grade|topic|your name/i)).toHaveCount(0);
   const html = await page.content();

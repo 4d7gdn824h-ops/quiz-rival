@@ -40,7 +40,9 @@ export default async function ParentKeyPage({
               item.id === pack.id ? "bg-lime-300 text-black" : "bg-white/10"
             }`}
           >
-            {item.title}
+            <span className="title-clamp" title={item.title}>
+              {item.title}
+            </span>
           </Link>
         ))}
         {(["A", "B"] as const).map((option) => (
