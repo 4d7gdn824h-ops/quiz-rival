@@ -270,7 +270,7 @@ Essay prompts (do not answer them): ${notes.essayPrompts.join(" | ")}
 Kept text: ${notes.rawText.slice(0, 4000)}`;
 
   const raw = await xaiComplete({ content: prompt, temperature: 0.4, maxTokens: 4096 });
-  const parsed = parseJsonObject(raw) as {
+  const parsed = parseJsonObject(raw.text) as {
     title?: string;
     language?: string;
     levels?: {

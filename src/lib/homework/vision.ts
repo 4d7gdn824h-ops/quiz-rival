@@ -11,30 +11,22 @@ import { HomeworkError } from "./errors";
 import { asLines } from "./lines";
 import { detectLanguage, normalizeQuizLanguage } from "./language";
 import { xaiComplete } from "./xai";
-
-const EXTRACT_INSTRUCTIONS = `You extract a child's homework worksheet for a parent-supervised quiz app.
-Return ONLY JSON with this shape:
-{
-  "title": string,
-  "language": "BCP-47 or ISO 639 code for the worksheet (e.g. pl, en, es, fr, de, uk). Never translate. Never coerce to pl or en if the page is another language.",
-  "topics": string[],
-  "facts": string[],
-  "essayPrompts": string[],
-  "rawText": string,
-  "lines": [{ "text": string, "junk": boolean }]
-}
-Rules:
-- Help kids practice. Do NOT solve the worksheet. Do NOT write essay answers.
-- facts[] are study notes from the page (true statements, terms, names) — not the answer key to exercises when that would do the work for them.
-- essayPrompts[] only if the page asks for a longer written answer / pytanie problemowe / wypracowanie / essai / redacción.
-- Mark header junk (name, class, school, signature, page numbers) as junk: true.
-- Keep the original language of the worksheet in title, topics, facts, prompts, rawText, lines.`;
+import {
+  SINGLE_PAGE_EXTRACT_INSTRUCTIONS,
+  VISION_MAX_TOKENS,
+  compactPageNotes,
+  modelHasReadableText,
+  parseModelObject,
+  tryParseJson,
+  unreadablePageError,
+  visionExtractPrompt,
+} from "./vision-read";
 
 export async function extractWithVision(input: {
   images: { bytes: Buffer; mime: string }[];
-}): Promise<{ notes: ExtractedNotes; mode: "xai" }> {
+}): Promise<{ notes: ExtractedNotes; mode: "xai"; finishReason: string | null }> {
   if (!process.env.XAI_API_KEY) {
-    throw new HomeworkError("No vision API key configured", "unreadable", 500);
+    throw new HomeworkError("We couldn't read that page. Try again in a moment.", "ai_error", 500);
   }
   const images = input.images.slice(0, 6).filter((image) => image.bytes.length > 0);
   if (!images.length) {
@@ -47,14 +39,14 @@ export async function extractWithVision(input: {
       422,
     );
   }
-  const text = await xaiComplete({
+  const completion = await xaiComplete({
     temperature: 0.2,
-    maxTokens: 2048,
+    maxTokens: VISION_MAX_TOKENS,
     kind: "vision",
     content: [
       {
         type: "text",
-        text: `${EXTRACT_INSTRUCTIONS}\nThe images are consecutive pages of one worksheet, in order. Combine them into one set of notes.`,
+        text: visionExtractPrompt(images.length),
       },
       ...images.map((image) => ({
         type: "image_url",
@@ -64,24 +56,31 @@ export async function extractWithVision(input: {
       })),
     ],
   });
-  return { notes: notesFromModelText(text), mode: "xai" };
+  return {
+    notes: notesFromModelText(completion.text, completion.finishReason),
+    mode: "xai",
+    finishReason: completion.finishReason,
+  };
 }
 
 export async function structureWorksheetText(
   rawText: string,
   titleHint?: string,
-): Promise<ExtractedNotes> {
+): Promise<{ notes: ExtractedNotes; finishReason: string | null }> {
   const clipped = rawText.slice(0, 12000);
-  const text = await xaiComplete({
+  const completion = await xaiComplete({
     temperature: 0.2,
     maxTokens: 2048,
-    content: `${EXTRACT_INSTRUCTIONS}\n\nWorksheet title hint: ${titleHint || "Tonight's homework"}\n\nWorksheet text:\n${clipped}`,
+    content: `${SINGLE_PAGE_EXTRACT_INSTRUCTIONS}\n\nWorksheet title hint: ${titleHint || "Tonight's homework"}\n\nWorksheet text:\n${clipped}`,
   });
-  return notesFromModelText(text);
+  return {
+    notes: notesFromModelText(completion.text, completion.finishReason),
+    finishReason: completion.finishReason,
+  };
 }
 
-function notesFromModelText(text: string): ExtractedNotes {
-  const parsed = parseJsonObject(text) as {
+function notesFromModelText(text: string, finishReason: string | null): ExtractedNotes {
+  const parsed = parseModelObject(text, finishReason) as {
     title?: string;
     language?: string;
     topics?: unknown;
@@ -89,8 +88,10 @@ function notesFromModelText(text: string): ExtractedNotes {
     essayPrompts?: unknown;
     rawText?: string;
     lines?: { text?: string; junk?: boolean }[];
+    pages?: unknown;
   };
-  const rawText = String(parsed.rawText || "").trim();
+  const pageNotes = compactPageNotes(parsed.pages);
+  const rawText = String(parsed.rawText || "").trim() || pageNotes.join("\n\n");
   const lines =
     Array.isArray(parsed.lines) && parsed.lines.length
       ? parsed.lines
@@ -104,21 +105,26 @@ function notesFromModelText(text: string): ExtractedNotes {
   const topics = stringList(parsed.topics);
   const facts = stringList(parsed.facts);
   const essayPrompts = stringList(parsed.essayPrompts);
-  const blob = `${parsed.title ?? ""}\n${topics.join(" ")}\n${facts.join(" ")}\n${rawText}`;
+  const factList = facts.length ? facts : pageNotes.slice(0, 16);
+  const blob = `${parsed.title ?? ""}\n${topics.join(" ")}\n${factList.join(" ")}\n${rawText}`;
   const language = normalizeQuizLanguage(parsed.language, detectLanguage(blob));
-  if (!topics.length && !facts.length && !rawText && !lines.length) {
-    throw new HomeworkError(
-      "We couldn't read that page. Try a sharper photo in good light.",
-      "unreadable",
-      422,
-    );
+  if (
+    !modelHasReadableText({
+      topics,
+      facts: factList,
+      rawText,
+      lineCount: lines.length,
+      pageNotes,
+    })
+  ) {
+    throw unreadablePageError(finishReason);
   }
   const kept = lines.filter((line) => line.keep).map((line) => line.text);
   return {
     title: String(parsed.title || "").trim() || "Tonight's homework",
     language,
     topics: topics.length ? topics : kept.slice(0, 5),
-    facts: facts.length ? facts : topics.length ? topics : kept.slice(0, 8),
+    facts: factList.length ? factList : topics.length ? topics : kept.slice(0, 8),
     essayPrompts,
     rawText: rawText || kept.join("\n"),
     lines,
@@ -131,13 +137,7 @@ function stringList(value: unknown): string[] {
 }
 
 export function parseJsonObject(text: string): Record<string, unknown> {
-  const trimmed = text.trim();
-  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  const candidate = fenced ? fenced[1].trim() : trimmed;
-  const start = candidate.indexOf("{");
-  const end = candidate.lastIndexOf("}");
-  if (start < 0 || end <= start) {
-    throw new Error("Model did not return JSON");
-  }
-  return JSON.parse(candidate.slice(start, end + 1)) as Record<string, unknown>;
+  const parsed = tryParseJson(text);
+  if (!parsed) throw new Error("Model did not return JSON");
+  return parsed;
 }

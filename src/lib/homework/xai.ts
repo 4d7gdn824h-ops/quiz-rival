@@ -2,6 +2,7 @@ import "server-only";
 
 import { HomeworkError } from "./errors";
 import { assertAiKeysStayServerSide } from "./mode";
+import { xaiHttpCode } from "./vision-read";
 
 const XAI_TIMEOUT_MS = 40_000;
 
@@ -41,10 +42,12 @@ export async function xaiComplete(input: {
   temperature?: number;
   maxTokens?: number;
   kind?: "text" | "vision";
-}): Promise<string> {
+}): Promise<{ text: string; finishReason: string | null }> {
   assertAiKeysStayServerSide();
   const key = process.env.XAI_API_KEY;
-  if (!key) throw new HomeworkError("XAI_API_KEY missing", "xai_http", 500);
+  if (!key) {
+    throw new HomeworkError("We couldn't read that page. Try again in a moment.", "ai_error", 500);
+  }
 
   const model = xaiModel(input.kind);
   const controller = new AbortController();
@@ -68,24 +71,37 @@ export async function xaiComplete(input: {
     });
 
     if (!response.ok) {
-      throw new HomeworkError(`xAI request failed (${response.status})`, "xai_http", 502);
+      throw new HomeworkError(
+        "We couldn't read that page. Try again in a moment.",
+        xaiHttpCode(response.status),
+        502,
+      );
     }
 
     const body = (await response.json()) as {
-      choices?: { message?: { content?: unknown } }[];
+      choices?: { finish_reason?: unknown; message?: { content?: unknown } }[];
     };
-    const text = messageText(body.choices?.[0]?.message?.content);
+    const choice = body.choices?.[0];
+    const finishReason = typeof choice?.finish_reason === "string" ? choice.finish_reason : null;
+    const text = messageText(choice?.message?.content);
     if (!text.trim()) {
-      throw new HomeworkError("Model returned an empty response", "xai_empty", 502);
+      const error = new HomeworkError(
+        finishReason === "length"
+          ? "We couldn't read that page. Try a sharper photo in good light."
+          : "We couldn't read that page. Try again in a moment.",
+        finishReason === "length" ? "truncated" : "ai_error",
+        finishReason === "length" ? 422 : 502,
+      );
+      error.finishReason = finishReason;
+      throw error;
     }
-    return text;
+    return { text, finishReason };
   } catch (error) {
     if (error instanceof HomeworkError) throw error;
     if (isAbort(error)) {
-      throw new HomeworkError("The model took too long.", "timeout", 504);
+      throw new HomeworkError("This is taking too long.", "ai_timeout", 504);
     }
-    const message = error instanceof Error ? error.message : "xAI request failed";
-    throw new HomeworkError(message, "xai_http", 502);
+    throw new HomeworkError("We couldn't read that page. Try again in a moment.", "ai_error", 502);
   } finally {
     clearTimeout(timer);
   }

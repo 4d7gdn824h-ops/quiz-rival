@@ -21,48 +21,79 @@ export async function scanHomework(input: {
   const pages = (Array.isArray(input.pages) ? input.pages : []).filter(
     (page) => page && typeof page.data === "string",
   );
-  if (pages.length > MAX_SCAN_PAGES) {
-    throw new HomeworkError(PAGE_CAP_MESSAGE, "too_many_pages", 400);
-  }
+  const started = Date.now();
+  let extractMs = 0;
+  let generateMs = 0;
+  let finishReason: string | null = null;
+  try {
+    if (pages.length > MAX_SCAN_PAGES) {
+      throw new HomeworkError(PAGE_CAP_MESSAGE, "too_many_pages", 400);
+    }
 
-  const files = pages.map((page, index) => pageFile(page, index));
-  const extracted = await extractHomework({
-    files,
-    rawText: input.rawText,
-    title: input.title,
-    fixtureId: input.fixtureId,
-    pasteDemo: input.pasteDemo,
-    source: input.source,
-  });
+    const files = pages.map((page, index) => pageFile(page, index));
+    const extracted = await extractHomework({
+      files,
+      rawText: input.rawText,
+      title: input.title,
+      fixtureId: input.fixtureId,
+      pasteDemo: input.pasteDemo,
+      source: input.source,
+    });
+    extractMs = Date.now() - started;
+    finishReason = extracted.finishReason ?? null;
 
-  const notes = extracted.notes;
-  if (!notes.topics.length && !notes.facts.length && !notes.rawText.trim()) {
-    throw new HomeworkError(
-      "We couldn't read that page. Try a sharper photo in good light.",
-      "unreadable",
-      422,
-    );
-  }
+    const notes = extracted.notes;
+    if (!notes.topics.length && !notes.facts.length && !notes.rawText.trim()) {
+      const error = new HomeworkError(
+        "We couldn't read that page. Try a sharper photo in good light.",
+        "unreadable",
+        422,
+      );
+      error.finishReason = finishReason;
+      throw error;
+    }
 
-  const generated = await generateHomeworkPack(notes);
-  const pack = getPublicPack(generated.id);
-  if (!pack) {
-    throw new HomeworkError(
-      "We read your page but couldn't build the quiz.",
-      "generate_failed",
-      500,
-    );
+    const generateStarted = Date.now();
+    const generated = await generateHomeworkPack(notes);
+    generateMs = Date.now() - generateStarted;
+    const pack = getPublicPack(generated.id);
+    if (!pack) {
+      throw new HomeworkError(
+        "We read your page but couldn't build the quiz.",
+        "generate_failed",
+        500,
+      );
+    }
+    const gradeSeal = generated.mode === "xai" ? sealAnswerMap(generated.pack) : null;
+    const payload = {
+      mode: generated.mode,
+      notice: extracted.notice ?? null,
+      notes: clientNotes(notes),
+      pack,
+      playKit: toPlayKit(generated.pack, generated.levels, gradeSeal),
+    };
+    assertNoQuizSecrets(payload, "scan");
+    return { payload, pages: pages.length, extractMs, generateMs, finishReason };
+  } catch (error) {
+    stampScanTiming(error, { started, extractMs, generateMs, finishReason });
+    throw error;
   }
-  const gradeSeal = generated.mode === "xai" ? sealAnswerMap(generated.pack) : null;
-  const payload = {
-    mode: generated.mode,
-    notice: extracted.notice ?? null,
-    notes: clientNotes(notes),
-    pack,
-    playKit: toPlayKit(generated.pack, generated.levels, gradeSeal),
-  };
-  assertNoQuizSecrets(payload, "scan");
-  return payload;
+}
+
+function stampScanTiming(
+  error: unknown,
+  timing: { started: number; extractMs: number; generateMs: number; finishReason: string | null },
+) {
+  if (!(error instanceof HomeworkError)) return;
+  const elapsed = Date.now() - timing.started;
+  if (timing.extractMs === 0) {
+    error.extractMs = elapsed;
+    error.generateMs = 0;
+  } else {
+    error.extractMs = timing.extractMs;
+    error.generateMs = timing.generateMs || Math.max(0, elapsed - timing.extractMs);
+  }
+  if (error.finishReason == null) error.finishReason = timing.finishReason;
 }
 
 function clientNotes(notes: ExtractedNotes): ExtractedNotes {

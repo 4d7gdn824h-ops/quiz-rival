@@ -32,6 +32,8 @@ export interface HomeworkExtract {
   mode: HomeworkMode;
   notice?: string;
   createdAt: number;
+  /** Vision completion finish_reason. Null when no model call ran. */
+  finishReason?: string | null;
 }
 
 export interface GeneratedHomeworkPack {
