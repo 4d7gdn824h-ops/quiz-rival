@@ -90,7 +90,18 @@ export function hasRealTextLayer(text: string) {
   return (letters?.length ?? 0) >= 40;
 }
 
+const AI_TRY_AGAIN = "We couldn't read that page. Try again in a moment.";
+
 export function mapScanError(code: string, phase: "extract" | "generate" = "extract") {
+  if (code === "ai_timeout") {
+    return { code, message: SCAN_MESSAGES.timeout, action: "Try again" as const };
+  }
+  if (code === "parse_failed" || code === "truncated") {
+    return { code, message: SCAN_MESSAGES.unreadable, action: "Try again" as const };
+  }
+  if (code === "ai_error" || /^ai_http_\d+$/.test(code)) {
+    return { code, message: AI_TRY_AGAIN, action: "Try again" as const };
+  }
   const known = (Object.keys(SCAN_MESSAGES) as ScanErrorCode[]).find((item) => item === code);
   const resolved: ScanErrorCode =
     known ?? (phase === "generate" ? "generate_failed" : "unreadable");
@@ -203,6 +214,15 @@ export function codeFromFailure(input: {
   offline?: boolean;
 }) {
   if (input.offline || input.status === 0) return "offline";
+  if (
+    input.code === "ai_timeout" ||
+    input.code === "ai_error" ||
+    input.code === "parse_failed" ||
+    input.code === "truncated" ||
+    (input.code != null && /^ai_http_\d+$/.test(input.code))
+  ) {
+    return input.code;
+  }
   if (
     input.name === "TimeoutError" ||
     input.code === "timeout" ||

@@ -7,6 +7,7 @@ import { getFixtureMeta, getFixtureNotes, emptyPasteNotes, notesFromRawText } fr
 import { extractLocalNotes, extractLocalText } from "./local-text";
 import { homeworkMode, isAllowedUpload, isRasterImage, MAX_UPLOAD_BYTES } from "./mode";
 import type { ExtractedNotes, HomeworkExtract } from "./types";
+import { preserveReadError } from "./vision-read";
 import { extractWithVision, structureWorksheetText } from "./vision";
 
 export async function extractHomework(input: {
@@ -108,8 +109,8 @@ async function readPdfText(
     });
   }
   try {
-    const notes = await structureWorksheetText(rawText, title);
-    return finish({ notes, mode: "xai" });
+    const structured = await structureWorksheetText(rawText, title);
+    return finish({ notes: structured.notes, mode: "xai", finishReason: structured.finishReason });
   } catch (error) {
     if (local.topics.length || local.facts.length) {
       return finish({
@@ -119,7 +120,7 @@ async function readPdfText(
           "xAI could not be reached, so the text inside the PDF was used instead. The file was not saved.",
       });
     }
-    throw asReadError(error);
+    throw preserveReadError(error);
   }
 }
 
@@ -142,26 +143,12 @@ async function readImages(files: File[], mode: HomeworkExtract["mode"]): Promise
       });
     }
     const result = await extractWithVision({ images });
-    return finish({ notes: result.notes, mode: "xai" });
+    return finish({ notes: result.notes, mode: "xai", finishReason: result.finishReason });
   } catch (error) {
-    throw asReadError(error);
+    throw preserveReadError(error);
   } finally {
     for (const image of images) image.bytes.fill(0);
   }
-}
-
-function asReadError(error: unknown): HomeworkError {
-  if (error instanceof HomeworkError) {
-    if (error.code === "timeout") return error;
-    if (error.code === "unreadable" || error.code === "file_type" || error.code === "file_too_big") {
-      return error;
-    }
-  }
-  return new HomeworkError(
-    "We couldn't read that page. Try a sharper photo in good light.",
-    "unreadable",
-    422,
-  );
 }
 
 async function readFile(input: {
@@ -177,9 +164,9 @@ async function readFile(input: {
         const result = await extractWithVision({
           images: [{ bytes: input.bytes, mime: input.mime || "image/jpeg" }],
         });
-        return finish({ notes: result.notes, mode: "xai" });
+        return finish({ notes: result.notes, mode: "xai", finishReason: result.finishReason });
       } catch (error) {
-        throw asReadError(error);
+        throw preserveReadError(error);
       }
     }
 
@@ -190,8 +177,8 @@ async function readFile(input: {
     });
     if (localText && localText.replace(/\s+/g, " ").trim().length >= 24) {
       try {
-        const notes = await structureWorksheetText(localText, input.titleHint);
-        return finish({ notes, mode: "xai" });
+        const structured = await structureWorksheetText(localText, input.titleHint);
+        return finish({ notes: structured.notes, mode: "xai", finishReason: structured.finishReason });
       } catch (error) {
         const local = extractLocalNotes({
           bytes: input.bytes,
@@ -244,6 +231,7 @@ function finish(input: {
   notes: ExtractedNotes;
   mode: HomeworkExtract["mode"];
   notice?: string;
+  finishReason?: string | null;
 }): HomeworkExtract {
   return {
     id: randomId("ex"),
@@ -251,6 +239,7 @@ function finish(input: {
     mode: input.mode,
     notice: input.notice,
     createdAt: Date.now(),
+    finishReason: input.finishReason ?? null,
   };
 }
 
