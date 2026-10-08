@@ -8,6 +8,6 @@ export async function GET() {
     mode: homeworkMode(),
     vision: homeworkMode() !== "fixture",
     fixtures: HOMEWORK_FIXTURES,
-    fixtureImage: HOMEWORK_FIXTURES[0]?.image ?? "/fixtures/chlopi-worksheet.svg",
+    fixtureImage: HOMEWORK_FIXTURES[0]?.image ?? "/fixtures/water-cycle-worksheet.svg",
   });
 }

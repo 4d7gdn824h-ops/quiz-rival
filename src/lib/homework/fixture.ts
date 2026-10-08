@@ -1,5 +1,4 @@
 import { HOMEWORK_FIXTURES, getFixtureMeta } from "@/data/fixtures/catalog";
-import chlopiFixture from "@/data/fixtures/chlopi-worksheet.json";
 import planetasFixture from "@/data/fixtures/planetas-worksheet.json";
 import waterCycleFixture from "@/data/fixtures/water-cycle-worksheet.json";
 import type { ExtractedNotes } from "./types";
@@ -7,7 +6,7 @@ import type { ExtractedNotes } from "./types";
 export { HOMEWORK_FIXTURES, getFixtureMeta } from "@/data/fixtures/catalog";
 export { asLines, looksLikeJunk, notesFromRawText, emptyPasteNotes } from "./lines";
 
-export const CHLOPI_FIXTURE_ID = "chlopi-worksheet";
+export const DEFAULT_FIXTURE_ID = "water-cycle-worksheet";
 
 type FixtureFile = {
   id: string;
@@ -21,7 +20,6 @@ type FixtureFile = {
 };
 
 const FILES: Record<string, FixtureFile> = {
-  "chlopi-worksheet": chlopiFixture as FixtureFile,
   "water-cycle-worksheet": waterCycleFixture as FixtureFile,
   "planetas-worksheet": planetasFixture as FixtureFile,
 };
@@ -30,7 +28,7 @@ export function listFixtureIds() {
   return HOMEWORK_FIXTURES.map((item) => item.id);
 }
 
-export function getFixtureNotes(id = CHLOPI_FIXTURE_ID): ExtractedNotes {
+export function getFixtureNotes(id = DEFAULT_FIXTURE_ID): ExtractedNotes {
   const file = FILES[id];
   if (!file) {
     throw new Error(`Unknown demo worksheet: ${id}`);

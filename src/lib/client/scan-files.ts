@@ -1,42 +1,23 @@
 import {
+  admitPages,
   fitLongEdge,
-  hasRealTextLayer,
   isAcceptedScanFile,
-  JPEG_QUALITY,
+  JSON_BODY_BUDGET,
   LONG_EDGE,
-  MAX_PDF_PAGES,
-  MAX_REQUEST_BYTES,
+  SCALE_LADDER,
   ScanFailure,
+  scanJsonBytes,
 } from "./scan-prep";
 
-export interface ScanPreview {
-  thumbUrl: string | null;
-  pageCount: number;
-  truncated: boolean;
+export interface TrayPage {
+  id: string;
+  thumbUrl: string;
+  label: string;
+  canvas: HTMLCanvasElement;
 }
-
-export type PreparedScan =
-  | {
-      kind: "images";
-      files: File[];
-      pageCount: number;
-      truncated: boolean;
-      thumbUrl: string | null;
-    }
-  | {
-      kind: "text";
-      text: string;
-      title: string;
-      pageCount: number;
-      truncated: boolean;
-      thumbUrl: string | null;
-    };
-
-type PdfTextItem = { str?: string };
 
 type PdfPage = {
   getViewport: (params: { scale: number }) => { width: number; height: number };
-  getTextContent: () => Promise<{ items: unknown[] }>;
   render: (params: {
     canvasContext: CanvasRenderingContext2D;
     viewport: { width: number; height: number };
@@ -49,27 +30,97 @@ type PdfDoc = {
   destroy?: () => Promise<void> | void;
 };
 
-export async function prepareScanFile(
-  file: File,
-  hooks: {
-    signal?: AbortSignal;
-    onPreview: (preview: ScanPreview) => void;
-  },
-): Promise<PreparedScan> {
+let pageSerial = 0;
+
+export async function addFilesToTray(
+  existingCount: number,
+  files: File[],
+  hooks: { signal?: AbortSignal } = {},
+): Promise<{ pages: TrayPage[]; message: string | null; truncated: boolean }> {
   throwIfAborted(hooks.signal);
-  const kind = isAcceptedScanFile(file);
-  if (!kind) throw new ScanFailure("file_type");
-  if (kind === "pdf") return preparePdf(file, hooks);
-  return prepareImage(file, hooks);
+  const described: { file: File; kind: "image" | "pdf"; pageCount: number }[] = [];
+  for (const file of files) {
+    throwIfAborted(hooks.signal);
+    const kind = isAcceptedScanFile(file);
+    if (!kind) throw new ScanFailure("file_type");
+    if (kind === "pdf") {
+      described.push({ file, kind, pageCount: await pdfPageCount(file) });
+    } else {
+      described.push({ file, kind, pageCount: 1 });
+    }
+  }
+
+  const admission = admitPages(
+    existingCount,
+    described.map((item) => ({ kind: item.kind, pageCount: item.pageCount })),
+  );
+
+  const pages: TrayPage[] = [];
+  for (let index = 0; index < described.length; index += 1) {
+    throwIfAborted(hooks.signal);
+    const decision = admission.files[index];
+    const item = described[index];
+    if (!decision || decision.rejected || decision.take < 1 || !item) continue;
+    if (item.kind === "pdf") {
+      pages.push(...(await rasterPdf(item.file, decision.take, hooks.signal)));
+    } else {
+      pages.push(await rasterImage(item.file));
+    }
+  }
+
+  return { pages, message: admission.message, truncated: admission.truncated };
 }
 
-async function prepareImage(
-  file: File,
-  hooks: { signal?: AbortSignal; onPreview: (preview: ScanPreview) => void },
-): Promise<PreparedScan> {
-  const quick = URL.createObjectURL(file);
-  hooks.onPreview({ thumbUrl: quick, pageCount: 1, truncated: false });
-  throwIfAborted(hooks.signal);
+export async function encodeTrayForJson(pages: TrayPage[]) {
+  for (const step of SCALE_LADDER) {
+    const encoded: { mime: string; data: string }[] = [];
+    const sizes: number[] = [];
+    for (const page of pages) {
+      const blob = await canvasToJpeg(scaleCanvas(page.canvas, step.longEdge), step.quality);
+      sizes.push(blob.size);
+      encoded.push({ mime: "image/jpeg", data: await blobToBase64(blob) });
+    }
+    const jsonBytes = new TextEncoder().encode(JSON.stringify({ pages: encoded })).length;
+    if (jsonBytes <= JSON_BODY_BUDGET && scanJsonBytes(sizes) <= JSON_BODY_BUDGET) {
+      return { pages: encoded, jsonBytes };
+    }
+  }
+  throw new ScanFailure("body_too_large");
+}
+
+async function pdfPageCount(file: File) {
+  const pdfjs = await import("pdfjs-dist");
+  pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+  const data = new Uint8Array(await file.arrayBuffer());
+  const doc = (await pdfjs.getDocument({ data, useSystemFonts: true }).promise) as unknown as PdfDoc;
+  try {
+    return doc.numPages;
+  } finally {
+    await doc.destroy?.();
+  }
+}
+
+async function rasterPdf(file: File, take: number, signal?: AbortSignal) {
+  const pdfjs = await import("pdfjs-dist");
+  pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+  const data = new Uint8Array(await file.arrayBuffer());
+  const doc = (await pdfjs.getDocument({ data, useSystemFonts: true }).promise) as unknown as PdfDoc;
+  try {
+    const pages: TrayPage[] = [];
+    const limit = Math.min(doc.numPages, take);
+    for (let index = 1; index <= limit; index += 1) {
+      throwIfAborted(signal);
+      const page = await doc.getPage(index);
+      const canvas = await rasterPage(page, LONG_EDGE);
+      pages.push(trayPage(canvas, `Page ${index}`));
+    }
+    return pages;
+  } finally {
+    await doc.destroy?.();
+  }
+}
+
+async function rasterImage(file: File) {
   let bitmap: ImageBitmap;
   try {
     bitmap = await createImageBitmap(file);
@@ -86,97 +137,21 @@ async function prepareImage(
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, size.width, size.height);
     ctx.drawImage(bitmap, 0, 0, size.width, size.height);
-    let quality = JPEG_QUALITY;
-    let blob = await canvasToJpeg(canvas, quality);
-    if (blob.size > MAX_REQUEST_BYTES) {
-      quality = 0.6;
-      blob = await canvasToJpeg(canvas, quality);
-    }
-    if (blob.size > MAX_REQUEST_BYTES) throw new ScanFailure("file_too_big");
-    const thumbUrl = URL.createObjectURL(blob);
-    const jpeg = new File([blob], jpegName(file.name), { type: "image/jpeg" });
-    hooks.onPreview({ thumbUrl, pageCount: 1, truncated: false });
-    URL.revokeObjectURL(quick);
-    return { kind: "images", files: [jpeg], pageCount: 1, truncated: false, thumbUrl };
+    return trayPage(canvas, file.name);
   } finally {
     bitmap.close();
   }
 }
 
-async function preparePdf(
-  file: File,
-  hooks: { signal?: AbortSignal; onPreview: (preview: ScanPreview) => void },
-): Promise<PreparedScan> {
-  const pdfjs = await import("pdfjs-dist");
-  pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
-  const data = new Uint8Array(await file.arrayBuffer());
-  throwIfAborted(hooks.signal);
-  const doc = (await pdfjs
-    .getDocument({ data, useSystemFonts: true })
-    .promise) as unknown as PdfDoc;
-  try {
-    const pageCount = doc.numPages;
-    const truncated = pageCount > MAX_PDF_PAGES;
-    const limit = Math.min(pageCount, MAX_PDF_PAGES);
-    hooks.onPreview({ thumbUrl: null, pageCount, truncated });
-    if (!limit) throw new ScanFailure("unreadable");
-
-    let text = "";
-    for (let index = 1; index <= limit; index += 1) {
-      throwIfAborted(hooks.signal);
-      const page = await doc.getPage(index);
-      const content = await page.getTextContent();
-      text += `${textFromItems(content.items)}\n`;
-    }
-
-    const title = file.name.replace(/\.pdf$/i, "").replace(/[-_]+/g, " ");
-    if (hasRealTextLayer(text)) {
-      const first = await doc.getPage(1);
-      const thumbBlob = await renderPage(first, 800, 0.7);
-      const thumbUrl = URL.createObjectURL(thumbBlob);
-      hooks.onPreview({ thumbUrl, pageCount, truncated });
-      return { kind: "text", text: text.trim(), title, pageCount, truncated, thumbUrl };
-    }
-
-    const canvases: HTMLCanvasElement[] = [];
-    for (let index = 1; index <= limit; index += 1) {
-      throwIfAborted(hooks.signal);
-      const page = await doc.getPage(index);
-      const canvas = await rasterPage(page, LONG_EDGE);
-      canvases.push(canvas);
-      if (index === 1) {
-        const thumbUrl = URL.createObjectURL(await canvasToJpeg(canvas, JPEG_QUALITY));
-        hooks.onPreview({ thumbUrl, pageCount, truncated });
-      }
-    }
-    let files = await filesFromCanvases(canvases, JPEG_QUALITY);
-    if (totalSize(files) > MAX_REQUEST_BYTES) {
-      files = await filesFromCanvases(canvases, 0.6);
-    }
-    if (totalSize(files) > MAX_REQUEST_BYTES) throw new ScanFailure("file_too_big");
-    return {
-      kind: "images",
-      files,
-      pageCount,
-      truncated,
-      thumbUrl: files[0] ? URL.createObjectURL(files[0]) : null,
-    };
-  } finally {
-    await doc.destroy?.();
-  }
-}
-
-function textFromItems(items: unknown[]) {
-  return items
-    .map((item) => {
-      if (item && typeof item === "object" && "str" in item) {
-        return String((item as PdfTextItem).str ?? "");
-      }
-      return "";
-    })
-    .join(" ")
-    .replace(/\s+/g, " ")
-    .trim();
+function trayPage(canvas: HTMLCanvasElement, label: string): TrayPage {
+  pageSerial += 1;
+  const thumb = scaleCanvas(canvas, 360);
+  return {
+    id: `page-${pageSerial}`,
+    thumbUrl: thumb.toDataURL("image/jpeg", 0.7),
+    label,
+    canvas,
+  };
 }
 
 async function rasterPage(page: PdfPage, maxEdge: number) {
@@ -194,18 +169,18 @@ async function rasterPage(page: PdfPage, maxEdge: number) {
   return canvas;
 }
 
-async function renderPage(page: PdfPage, maxEdge: number, quality: number) {
-  const canvas = await rasterPage(page, maxEdge);
-  return canvasToJpeg(canvas, quality);
-}
-
-function filesFromCanvases(canvases: HTMLCanvasElement[], quality: number) {
-  return Promise.all(
-    canvases.map(async (canvas, index) => {
-      const blob = await canvasToJpeg(canvas, quality);
-      return new File([blob], `page-${index + 1}.jpg`, { type: "image/jpeg" });
-    }),
-  );
+function scaleCanvas(source: HTMLCanvasElement, maxEdge: number) {
+  const size = fitLongEdge(source.width, source.height, maxEdge);
+  if (size.width === source.width && size.height === source.height) return source;
+  const canvas = document.createElement("canvas");
+  canvas.width = size.width;
+  canvas.height = size.height;
+  const ctx = canvas.getContext("2d", { alpha: false });
+  if (!ctx) throw new ScanFailure("unreadable");
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, size.width, size.height);
+  ctx.drawImage(source, 0, 0, size.width, size.height);
+  return canvas;
 }
 
 function canvasToJpeg(canvas: HTMLCanvasElement, quality: number) {
@@ -224,17 +199,19 @@ function canvasToJpeg(canvas: HTMLCanvasElement, quality: number) {
   });
 }
 
-function totalSize(files: File[]) {
-  return files.reduce((sum, file) => sum + file.size, 0);
-}
-
-function jpegName(name: string) {
-  const base = name.replace(/\.[^.]+$/, "") || "page";
-  return `${base}.jpg`;
+function blobToBase64(blob: Blob) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result || "");
+      const comma = result.indexOf(",");
+      resolve(comma >= 0 ? result.slice(comma + 1) : result);
+    };
+    reader.onerror = () => reject(new ScanFailure("unreadable"));
+    reader.readAsDataURL(blob);
+  });
 }
 
 function throwIfAborted(signal?: AbortSignal) {
-  if (signal?.aborted) {
-    throw new DOMException("Aborted", "AbortError");
-  }
+  if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
 }

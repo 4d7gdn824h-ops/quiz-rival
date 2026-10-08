@@ -5,7 +5,6 @@ import type {
   QuizLanguage,
   QuizPackFile,
 } from "@/data/types";
-import type { WritingPromptConfig } from "@/data/writing-config";
 
 export type HomeworkMode = "xai" | "fixture";
 
@@ -39,7 +38,7 @@ export interface GeneratedHomeworkPack {
   id: string;
   pack: QuizPackFile;
   levels: Level[];
-  writing: WritingPromptConfig | null;
+  writing: null;
   notes: ExtractedNotes;
   mode: HomeworkMode;
   createdAt: number;
@@ -53,5 +52,5 @@ export interface PublicHomeworkPack extends PackCatalogItem {
 }
 
 export interface PublicPackDetail extends PublicHomeworkPack {
-  writing: WritingPromptConfig | null;
+  writing: null;
 }

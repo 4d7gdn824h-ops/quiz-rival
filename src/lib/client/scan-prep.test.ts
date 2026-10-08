@@ -1,10 +1,19 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  admitPages,
+  base64Length,
+  bodyExceedsBudget,
+  chooseScaleIndex,
   fitLongEdge,
+  JSON_BODY_BUDGET,
   LONG_EDGE,
   mapScanError,
+  MAX_SCAN_PAGES,
+  PAGE_CAP_MESSAGE,
   retryMode,
+  SCALE_LADDER,
+  scanJsonBytes,
   SCAN_MESSAGES,
 } from "./scan-prep.ts";
 
@@ -37,6 +46,85 @@ describe("mapScanError", () => {
     assert.equal(mapScanError("timeout").action, "Try again");
     assert.equal(mapScanError("generate_failed").action, "Try again");
     assert.equal(mapScanError("offline").action, "Try again");
+  });
+});
+
+describe("admitPages", () => {
+  it("keeps the first 6 images and rejects a 7th", () => {
+    const incoming = Array.from({ length: 7 }, () => ({ kind: "image" as const, pageCount: 1 }));
+    const result = admitPages(0, incoming);
+    assert.equal(result.files.filter((file) => !file.rejected).length, MAX_SCAN_PAGES);
+    assert.equal(result.files[6]?.rejected, true);
+    assert.equal(result.files[6]?.take, 0);
+    assert.equal(result.total, 6);
+    assert.equal(result.message, PAGE_CAP_MESSAGE);
+  });
+
+  it("rejects a PDF that would push the tray past 6 and keeps the pages already there", () => {
+    const result = admitPages(4, [{ kind: "pdf", pageCount: 3 }]);
+    assert.deepEqual(result.files, [{ take: 0, rejected: true }]);
+    assert.equal(result.total, 4);
+    assert.equal(result.message, PAGE_CAP_MESSAGE);
+    assert.equal(result.truncated, false);
+  });
+
+  it("takes only the first 6 pages of a PDF dropped onto an empty tray", () => {
+    const result = admitPages(0, [{ kind: "pdf", pageCount: 9 }]);
+    assert.deepEqual(result.files, [{ take: 6, rejected: false }]);
+    assert.equal(result.total, 6);
+    assert.equal(result.truncated, true);
+    assert.equal(result.message, null);
+  });
+
+  it("accepts a PDF that still fits", () => {
+    const result = admitPages(2, [
+      { kind: "image", pageCount: 1 },
+      { kind: "pdf", pageCount: 3 },
+    ]);
+    assert.deepEqual(result.files, [
+      { take: 1, rejected: false },
+      { take: 3, rejected: false },
+    ]);
+    assert.equal(result.total, 6);
+    assert.equal(result.message, null);
+  });
+});
+
+describe("scan JSON body budget", () => {
+  it("measures base64 JSON growth and the 4MB cap", () => {
+    assert.equal(base64Length(3), 4);
+    assert.equal(base64Length(4), 8);
+    const one = scanJsonBytes([30]);
+    const payload = JSON.stringify({
+      pages: [{ mime: "image/jpeg", data: "A".repeat(base64Length(30)) }],
+    });
+    assert.equal(one, new TextEncoder().encode(payload).length);
+    assert.equal(bodyExceedsBudget(JSON_BODY_BUDGET), false);
+    assert.equal(bodyExceedsBudget(JSON_BODY_BUDGET + 1), true);
+    assert.ok(JSON_BODY_BUDGET < 4.5 * 1024 * 1024);
+  });
+
+  it("stays on the 1600px step when six pages already fit", () => {
+    const modest = Array.from({ length: SCALE_LADDER.length }, () => Array(6).fill(80_000));
+    const chosen = chooseScaleIndex(modest);
+    assert.equal(chosen?.index, 0);
+    assert.equal(SCALE_LADDER[0]?.longEdge, LONG_EDGE);
+    assert.ok((chosen?.jsonBytes ?? Infinity) <= JSON_BODY_BUDGET);
+  });
+
+  it("steps down the ladder until the JSON body is under about 4MB", () => {
+    const tooBig = Array(6).fill(900_000);
+    const fits = Array(6).fill(400_000);
+    const chosen = chooseScaleIndex([tooBig, tooBig, fits, fits]);
+    assert.equal(chosen?.index, 2);
+    assert.equal(SCALE_LADDER[chosen?.index ?? 0]?.longEdge, 1280);
+    assert.ok(scanJsonBytes(tooBig) > JSON_BODY_BUDGET);
+    assert.ok((chosen?.jsonBytes ?? Infinity) <= JSON_BODY_BUDGET);
+  });
+
+  it("gives up when every step is still over the budget", () => {
+    const huge = Array.from({ length: SCALE_LADDER.length }, () => Array(6).fill(2_000_000));
+    assert.equal(chooseScaleIndex(huge), null);
   });
 });
 

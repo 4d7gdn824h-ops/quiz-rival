@@ -2,13 +2,9 @@ import "server-only";
 
 import { getGeneratedPack } from "@/lib/homework/registry";
 import type { QuizPackFile, QuizQuestion, QuizVariant } from "./types";
-import chlopi from "./chlopi.json";
 import warmupEn from "./warmup-en.json";
 
-const PACKS: QuizPackFile[] = [
-  chlopi as QuizPackFile,
-  warmupEn as QuizPackFile,
-];
+const PACKS: QuizPackFile[] = [warmupEn as QuizPackFile];
 
 export function listPacks(): QuizPackFile[] {
   return PACKS;

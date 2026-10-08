@@ -1,18 +1,15 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { PACK_CATALOG } from "@/data/catalog";
 import { listTinyLevels } from "@/data/levels";
 import type { PublicLevel, QuizVariant } from "@/data/types";
-import { createRoom, extractHomeworkRequest, fetchPackCatalog, fetchRoomService, joinRoom } from "@/lib/client/api";
+import { createRoom, fetchPackCatalog, fetchRoomService, joinRoom, scanHomeworkRequest } from "@/lib/client/api";
 import { writeLocalPlay } from "@/lib/client/local-play";
-import {
-  writeHomeworkDraft,
-  readTonightPackId,
-} from "@/lib/client/homework-draft";
-import { stashPendingScan } from "@/lib/client/pending-scan";
+import { readTonightPackId } from "@/lib/client/homework-draft";
+import { stashPendingPaste, stashPendingScan } from "@/lib/client/pending-scan";
+import { startScanPlay } from "@/lib/client/start-scan-play";
 import { readCompletedLevelIds } from "@/lib/client/path-progress";
 import { writeSession } from "@/lib/client/session";
 import type { PublicHomeworkPack } from "@/lib/homework/types";
@@ -27,7 +24,7 @@ function asClientPack(item: (typeof PACK_CATALOG)[number]): PublicHomeworkPack {
     ...item,
     generated: false,
     tonight: false,
-    hasEssay: item.id === "chlopi",
+    hasEssay: false,
     levels: listTinyLevels(item.id).map((level) => toPublicLevel(level, "A")),
   };
 }
@@ -36,7 +33,7 @@ export function HomeClient({ initialPackId }: { initialPackId?: string }) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [packs, setPacks] = useState<PublicHomeworkPack[]>(() => PACK_CATALOG.map(asClientPack));
-  const [quizId, setQuizId] = useState(initialPackId || PACK_CATALOG[0]?.id || "chlopi");
+  const [quizId, setQuizId] = useState(initialPackId || PACK_CATALOG[0]?.id || "warmup-en");
   const [variant, setVariant] = useState<QuizVariant>("A");
   const [joinCode, setJoinCode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -159,32 +156,25 @@ export function HomeClient({ initialPackId }: { initialPackId?: string }) {
     }
   }
 
-  async function runExtract(input: {
-    file?: File;
-    fixtureId?: string;
-    forceFixture?: boolean;
-    pasteDemo?: boolean;
-  }) {
+  async function runDemo(fixtureId: string) {
     setError(null);
     setBusy("extract");
     try {
-      const result = await extractHomeworkRequest(input);
-      writeHomeworkDraft({
-        extractId: result.id,
+      const result = await scanHomeworkRequest({ fixtureId });
+      startScanPlay({
+        packId: result.pack.id,
+        levels: result.pack.levels,
+        playKit: result.playKit,
         notes: result.notes,
         mode: result.mode,
         notice: result.notice,
       });
-      router.push("/homework");
+      router.push("/play");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not read that scan");
       setBusy(null);
     }
   }
-
-  const writeHref = "/write";
-  const writeKicker = "Kartkówka · 26 września";
-  const writeBlurb = "Write essay · pytanie problemowe · ~100 słów";
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 px-4 py-6">
@@ -293,29 +283,21 @@ export function HomeClient({ initialPackId }: { initialPackId?: string }) {
 
       <HomeworkScanCard
         busy={busy === "extract"}
-        onFile={(file) => {
-          stashPendingScan(file);
+        pages={[]}
+        capMessage={null}
+        truncated={false}
+        onFiles={(files) => {
+          stashPendingScan(files);
           router.push("/homework");
         }}
-        onDemo={(fixtureId) => void runExtract({ fixtureId })}
-        onPasteDemo={() => void runExtract({ pasteDemo: true })}
+        onRemove={() => undefined}
+        onStart={() => undefined}
+        onDemo={(fixtureId) => void runDemo(fixtureId)}
+        onPaste={() => {
+          stashPendingPaste();
+          router.push("/homework");
+        }}
       />
-
-      <Link
-        href={writeHref}
-        className="card card-quiet flex items-center justify-between gap-3 no-underline"
-      >
-        <span className="min-w-0 space-y-0.5">
-          <span className="block text-[0.7rem] font-semibold uppercase tracking-[0.22em] text-orange-300">
-            {writeKicker}
-          </span>
-          <h2 className="font-display text-xl leading-tight">Napisz wypracowanie</h2>
-          <span className="block text-xs text-white/55">{writeBlurb}</span>
-        </span>
-        <span className="shrink-0 text-white/40" aria-hidden="true">
-          →
-        </span>
-      </Link>
 
       {pathLevels.length ? (
         <section className="card space-y-2">

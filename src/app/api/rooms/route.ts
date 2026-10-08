@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     const store = getStore();
     const created = await store.createRoom({
       hostName: body.name ?? "",
-      quizId: body.quizId ?? "chlopi",
+      quizId: body.quizId ?? "warmup-en",
       variant: body.variant === "B" ? "B" : "A",
       playlistId: body.playlistId === "tiny" ? "tiny" : undefined,
       levelId: body.levelId ?? null,

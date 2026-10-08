@@ -149,6 +149,42 @@ export async function extractHomeworkRequest(
   );
 }
 
+export type ScanPagePayload = { mime: string; data: string };
+
+export type ScanPlayResult = {
+  mode: HomeworkMode;
+  notice: string | null;
+  notes: ExtractedNotes;
+  pack: PublicHomeworkPack;
+  playKit: PlayKit;
+};
+
+export async function scanHomeworkRequest(
+  input: {
+    pages?: ScanPagePayload[];
+    rawText?: string;
+    title?: string;
+    fixtureId?: string;
+    pasteDemo?: boolean;
+    source?: string;
+  },
+  opts?: ScanRequestOpts,
+) {
+  return postScan<ScanPlayResult>(
+    "/api/homework/scan",
+    JSON.stringify({
+      pages: input.pages,
+      rawText: input.rawText,
+      title: input.title,
+      fixtureId: input.fixtureId,
+      pasteDemo: input.pasteDemo,
+      source: input.source,
+    }),
+    { "Content-Type": "application/json" },
+    opts,
+  );
+}
+
 export async function generateHomeworkRequest(notes: ExtractedNotes, opts?: ScanRequestOpts) {
   return postScan<{ mode: HomeworkMode; pack: PublicHomeworkPack; playKit: PlayKit }>(
     "/api/homework/generate",
