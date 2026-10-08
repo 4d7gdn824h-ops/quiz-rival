@@ -3,14 +3,9 @@ import "server-only";
 import { PACK_CATALOG } from "@/data/catalog";
 import { listTinyLevels as listStaticTinyLevels } from "@/data/levels";
 import { getPack } from "@/data/quizzes";
-import { CHLOPI_WRITING_CONFIG } from "@/data/writing-config";
 import { listGeneratedPacks } from "@/lib/homework/registry";
 import type { GeneratedHomeworkPack, PublicHomeworkPack, PublicPackDetail } from "@/lib/homework/types";
 import { toPublicLevel } from "@/lib/public-quiz";
-
-function staticWriting(id: string) {
-  return id === "chlopi" ? CHLOPI_WRITING_CONFIG : null;
-}
 
 function fromStatic(): PublicHomeworkPack[] {
   return PACK_CATALOG.map((item) => {
@@ -21,7 +16,7 @@ function fromStatic(): PublicHomeworkPack[] {
       title: pack?.title ?? item.title,
       generated: false,
       tonight: false,
-      hasEssay: item.id === "chlopi",
+      hasEssay: false,
       levels,
     };
   });
@@ -38,7 +33,7 @@ function fromGenerated(item: GeneratedHomeworkPack, tonight: boolean): PublicHom
     levelCount: item.levels.filter((level) => !level.mega).length,
     generated: true,
     tonight,
-    hasEssay: Boolean(item.writing),
+    hasEssay: false,
     levels: item.levels.filter((level) => !level.mega).map((level) => toPublicLevel(level, "A")),
   };
 }
@@ -58,10 +53,10 @@ export function getPublicPack(id: string): PublicPackDetail | undefined {
     const tonightId = listGeneratedPacks()[0]?.id;
     return {
       ...fromGenerated(generated, generated.id === tonightId),
-      writing: generated.writing,
+      writing: null,
     };
   }
   const item = fromStatic().find((pack) => pack.id === id);
   if (!item) return undefined;
-  return { ...item, writing: staticWriting(id) };
+  return { ...item, writing: null };
 }

@@ -25,26 +25,27 @@ function notes() {
   };
 }
 
-function level(index) {
+function level(index, fact, topic) {
   const question = (label) => ({
-    prompt: `${label} about stop ${index}`,
-    options: ["Oceans", "Deserts", "Mountains", "Markets"],
+    prompt: `${label}: ${fact}`,
+    options: [fact, "Not on the page", "A blank line", "Skip this"],
     correctIndex: 0,
     parentHint: "See the worksheet.",
   });
   return {
-    title: `Stop ${index}`,
+    title: topic,
     theme: `stop-${index}`,
-    questionsA: [question("Which note")],
+    questionsA: [question("Which note is on the page")],
     questionsB: [question("Rematch")],
   };
 }
 
 function quiz() {
+  const source = notes();
   return {
-    title: "Water cycle",
+    title: source.title,
     language: "en",
-    levels: [1, 2, 3, 4, 5].map(level),
+    levels: source.facts.map((fact, index) => level(index + 1, fact, source.topics[index] || `Stop ${index + 1}`)),
   };
 }
 

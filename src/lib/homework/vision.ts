@@ -36,7 +36,7 @@ export async function extractWithVision(input: {
   if (!process.env.XAI_API_KEY) {
     throw new HomeworkError("No vision API key configured", "unreadable", 500);
   }
-  const images = input.images.slice(0, 10).filter((image) => image.bytes.length > 0);
+  const images = input.images.slice(0, 6).filter((image) => image.bytes.length > 0);
   if (!images.length) {
     throw new HomeworkError("We couldn't read that page. Try a sharper photo in good light.", "unreadable", 422);
   }

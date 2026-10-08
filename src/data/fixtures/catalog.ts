@@ -9,13 +9,6 @@ export interface HomeworkFixtureMeta {
 /** Client-safe fixture index. Notes JSON stays on the server. */
 export const HOMEWORK_FIXTURES: HomeworkFixtureMeta[] = [
   {
-    id: "chlopi-worksheet",
-    title: "Chłopi (PL)",
-    language: "pl",
-    image: "/fixtures/chlopi-worksheet.svg",
-    blurb: "Klasa 8 literature card",
-  },
-  {
     id: "water-cycle-worksheet",
     title: "Water cycle (EN)",
     language: "en",

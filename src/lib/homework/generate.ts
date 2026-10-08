@@ -1,8 +1,6 @@
 import "server-only";
 
 import { createHash } from "crypto";
-import { LEVELS } from "@/data/levels";
-import { getPack } from "@/data/quizzes";
 import type { Level, QuizPackFile, QuizQuestion, QuizVariant } from "@/data/types";
 import { GameError } from "@/lib/game/engine";
 import { randomId } from "@/lib/ids";
@@ -14,7 +12,6 @@ import { saveGeneratedPack } from "./registry";
 import type { ExtractedNotes, GeneratedHomeworkPack, HomeworkMode } from "./types";
 import { parseJsonObject } from "./vision";
 import { HomeworkError } from "./errors";
-import { writingFromNotes } from "./writing-from-notes";
 import { xaiComplete } from "./xai";
 
 export function prepareNotes(rawNotes: ExtractedNotes): ExtractedNotes {
@@ -40,9 +37,6 @@ export function fixturePackFromNotes(rawNotes: ExtractedNotes): {
     throw new GameError("Keep at least a few topics or facts, then generate.", 400);
   }
   const id = deterministicPackId(notes);
-  if (looksLikeChlopi(notes)) {
-    return { notes, ...cloneChlopiPack(id, notes) };
-  }
   return { notes, ...buildDeterministicPack(id, notes) };
 }
 
@@ -56,7 +50,7 @@ export async function generateHomeworkPack(
   let levels: Level[] | undefined;
   let usedMode: HomeworkMode = "fixture";
 
-  if (mode === "xai" && !looksLikeChlopi(prepared)) {
+  if (mode === "xai") {
     try {
       const generated = await generateWithLlm(randomId("hw"), prepared);
       validatePack(generated.pack, generated.levels);
@@ -92,7 +86,7 @@ export async function generateHomeworkPack(
     id: pack.id,
     pack,
     levels,
-    writing: writingFromNotes(pack.id, notes),
+    writing: null,
     notes,
     mode: usedMode,
     createdAt: Date.now(),
@@ -127,67 +121,6 @@ function deterministicPackId(notes: ExtractedNotes) {
     raw: notes.rawText,
   });
   return `hw${createHash("sha256").update(body).digest("hex").slice(0, 12)}`;
-}
-
-function looksLikeChlopi(notes: ExtractedNotes) {
-  if (notes.fixtureId === "chlopi-worksheet") return true;
-  const blob = `${notes.title}\n${notes.topics.join(" ")}\n${notes.rawText}`.toLowerCase();
-  return /chłopi|chlopi|reymont/.test(blob);
-}
-
-function cloneChlopiPack(id: string, notes: ExtractedNotes) {
-  const source = getPack("chlopi");
-  if (!source) throw new GameError("Missing built-in Chłopi pack", 500);
-  const keptThemes = matchChlopiThemes(notes);
-  const sourceLevels = LEVELS.filter((level) => level.packId === "chlopi");
-  const tiny = sourceLevels.filter((level) => !level.mega && keptThemes.has(level.theme));
-  const useTiny = tiny.length >= 3 ? tiny : sourceLevels.filter((level) => !level.mega);
-
-  const pack: QuizPackFile = {
-    id,
-    title: notes.title,
-    language: "pl",
-    source: "Homework scan · Chłopi fixture",
-    variants: {
-      A: source.variants.A.map((question) => ({ ...question })),
-      B: source.variants.B.map((question) => ({ ...question })),
-    },
-  };
-
-  const levels: Level[] = [
-    {
-      id: `${id}-full`,
-      packId: id,
-      title: `${notes.title} · full pack`,
-      theme: "full-pack",
-      mega: true,
-      passRule: { type: "complete" },
-      questionIds: {
-        A: pack.variants.A.map((question) => question.id),
-        B: pack.variants.B.map((question) => question.id),
-      },
-    },
-    ...useTiny.map((level) => ({
-      ...level,
-      id: `${id}-${level.theme}`,
-      packId: id,
-    })),
-  ];
-  return { pack, levels };
-}
-
-function matchChlopiThemes(notes: ExtractedNotes) {
-  const blob = `${notes.topics.join(" ")}\n${notes.facts.join(" ")}`.toLowerCase();
-  const kept = new Set<string>();
-  if (/lektura|autor|reymont|lipce|boryna|fakt/.test(blob)) kept.add("comprehension");
-  if (/jagna|presja/.test(blob)) kept.add("jagna-presja");
-  if (/wyklucz/.test(blob)) kept.add("wykluczenie");
-  if (/antek|majątek|majatek|ziemi|dziedzic/.test(blob)) kept.add("majatek");
-  if (/aktual|teza|współczes|wspolczes|dziś|dzis/.test(blob)) kept.add("teza-aktualnosc");
-  if (!kept.size) {
-    return new Set(["comprehension", "jagna-presja", "wykluczenie", "majatek", "teza-aktualnosc"]);
-  }
-  return kept;
 }
 
 function buildDeterministicPack(id: string, notes: ExtractedNotes) {
@@ -311,7 +244,8 @@ async function generateWithLlm(
   id: string,
   notes: ExtractedNotes,
 ): Promise<{ pack: QuizPackFile; levels: Level[] }> {
-  const prompt = `Create a sibling-rivalry quiz pack from confirmed homework notes.
+  const prompt = `Create a sibling-rivalry quiz pack from homework notes taken from the student's pages.
+Every question must be answerable from those page notes. Infer a fair difficulty from the material. Do not ask the student for a name, grade, or topic list.
 Kids must practice — do NOT write the essay for them, and do NOT dump worksheet answer-key short answers as student-facing explanations.
 Write every student-facing prompt, option, and level title in the worksheet language (${notes.language}). Do not translate the notes into English or Polish unless the worksheet already is that language. Do not coerce language to pl or en.
 Return JSON:

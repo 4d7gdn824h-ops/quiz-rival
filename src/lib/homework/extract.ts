@@ -25,8 +25,7 @@ export async function extractHomework(input: {
     return finish({
       notes: emptyPasteNotes(input.title?.trim() || "Tonight's homework"),
       mode: "fixture",
-      notice:
-        "Paste or edit the worksheet lines (any language), uncheck junk, then generate. Photos are not treated as Chłopi when no vision key is set.",
+      notice: "Paste the worksheet lines, then we'll build the quiz.",
     });
   }
 
@@ -49,7 +48,7 @@ export async function extractHomework(input: {
 
   const wantNamedFixture = Boolean(input.fixtureId || (input.forceFixture && !uploads.length));
   if (wantNamedFixture) {
-    const fixtureId = input.fixtureId || "chlopi-worksheet";
+    const fixtureId = input.fixtureId || "water-cycle-worksheet";
     try {
       const notes = getFixtureNotes(fixtureId);
       const meta = getFixtureMeta(notes.fixtureId || fixtureId);
@@ -80,7 +79,7 @@ export async function extractHomework(input: {
 
   const images = uploads.filter((file) => isRasterImage(file.type || guessMime(file.name), file.name));
   if (images.length === uploads.length) {
-    return readImages(images.slice(0, 10), mode);
+    return readImages(images.slice(0, 6), mode);
   }
 
   const file = uploads[0];
@@ -229,7 +228,7 @@ async function readFile(input: {
       notes: { ...local, title: local.title || input.titleHint },
       mode: "fixture",
       notice:
-        "No XAI_API_KEY — built notes from text inside the file (SVG/PDF/plain text, not photo OCR). The file was not saved. This is not the Chłopi demo unless that page was Chłopi.",
+        "No XAI_API_KEY — built notes from text inside the file (SVG/PDF/plain text, not photo OCR). The file was not saved.",
     });
   }
 

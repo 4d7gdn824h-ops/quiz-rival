@@ -11,9 +11,9 @@ export default async function ParentKeyPage({
 }) {
   const query = await searchParams;
   const catalog = listPublicCatalog();
-  const packId = query.pack ?? catalog.find((item) => item.tonight)?.id ?? "chlopi";
+  const packId = query.pack ?? catalog.find((item) => item.tonight)?.id ?? "warmup-en";
   const variant = (query.variant === "B" ? "B" : "A") as QuizVariant;
-  const pack = getPack(packId) ?? getPack("chlopi");
+  const pack = getPack(packId) ?? getPack("warmup-en");
   if (!pack) {
     return <p className="p-6">Pack not found.</p>;
   }

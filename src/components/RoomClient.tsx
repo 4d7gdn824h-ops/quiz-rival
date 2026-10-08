@@ -271,7 +271,7 @@ export function RoomClient({ code }: { code: string }) {
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-4 px-4 py-8">
         <RoomFallback
           defaultName={name}
-          quizId="chlopi"
+          quizId="warmup-en"
           variant="A"
           message="This live room isn’t connected. Play on this phone instead."
         />
@@ -301,7 +301,7 @@ export function RoomClient({ code }: { code: string }) {
           {connectionLost ? (
             <RoomFallback
               defaultName={name}
-              quizId="chlopi"
+              quizId="warmup-en"
               variant="A"
               message="Couldn’t join that room. Play on this phone instead."
             />
