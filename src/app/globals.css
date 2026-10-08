@@ -22,6 +22,14 @@ html {
   background: var(--background);
 }
 
+.title-clamp {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
 .practice-banner {
   margin: 0;
   width: 100%;

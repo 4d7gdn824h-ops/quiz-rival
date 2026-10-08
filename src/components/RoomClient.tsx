@@ -333,7 +333,9 @@ export function RoomClient({ code }: { code: string }) {
           <p className="font-display text-3xl tracking-[0.2em]">{spacedCode}</p>
         </div>
         <div className="text-right text-sm text-white/60">
-          <p>{snapshot.room.quizTitle}</p>
+          <p className="title-clamp" title={snapshot.room.quizTitle} data-testid="quiz-title">
+            {snapshot.room.quizTitle}
+          </p>
           <p>Variant {snapshot.room.variant}</p>
         </div>
       </header>

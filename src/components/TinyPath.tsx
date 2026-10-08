@@ -60,7 +60,9 @@ export function TinyPath({
                 {completed ? "✓" : index + 1}
               </span>
               <span className="tiny-path-title">
-                {level.title}
+                <span className="title-clamp" title={level.title}>
+                  {level.title}
+                </span>
                 {level.questionCount ? (
                   <span className="tiny-path-meta">
                     {level.questionCount === 1

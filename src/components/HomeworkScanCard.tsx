@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { HOMEWORK_FIXTURES } from "@/data/fixtures/catalog";
 import { LONG_PDF_NOTE, MAX_SCAN_PAGES } from "@/lib/client/scan-prep";
+import { scanPageCountLabel } from "@/lib/copy";
 
 export interface ScanThumb {
   id: string;
@@ -109,7 +110,7 @@ export function HomeworkScanCard({
       {pages.length ? (
         <div className="space-y-2">
           <p data-testid="page-count" className="text-sm text-white/80">
-            {pages.length} of {MAX_SCAN_PAGES} {pages.length === 1 ? "page" : "pages"}
+            {scanPageCountLabel(pages.length, MAX_SCAN_PAGES)}
           </p>
           <ul className="grid grid-cols-3 gap-2">
             {pages.map((page, index) => (
