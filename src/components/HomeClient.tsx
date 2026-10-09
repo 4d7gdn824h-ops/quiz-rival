@@ -157,6 +157,27 @@ export function HomeClient({ initialPackId }: { initialPackId?: string }) {
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 px-4 py-6">
+      <HomeworkScanCard
+        busy={busy === "extract"}
+        pages={[]}
+        capMessage={null}
+        truncated={false}
+        onFiles={(files) => {
+          stashPendingScan(files);
+          router.push("/homework");
+        }}
+        onRemove={() => undefined}
+        onStart={() => undefined}
+        onDemo={(fixtureId) => {
+          stashPendingDemo(fixtureId);
+          router.push("/homework");
+        }}
+        onPaste={() => {
+          stashPendingPaste();
+          router.push("/homework");
+        }}
+      />
+
       <header className="space-y-1.5 text-center">
         <p className="text-xs font-semibold uppercase tracking-[0.35em] text-lime-300">
           Live sibling challenge
@@ -189,35 +210,6 @@ export function HomeClient({ initialPackId }: { initialPackId?: string }) {
           <h2 className="font-display text-3xl">Create room</h2>
           <p className="text-sm text-white/65">Host the sibling race. Share the 4-letter code.</p>
         </div>
-        <fieldset className="space-y-2">
-          <legend className="text-sm font-medium text-white/80">Quiz pack</legend>
-          <div className="grid gap-2">
-            {packs.map((pack) => (
-              <label
-                key={pack.id}
-                className={`choice ${quizId === pack.id ? "choice-on" : ""}`}
-              >
-                <input
-                  type="radio"
-                  name="pack"
-                  value={pack.id}
-                  checked={quizId === pack.id}
-                  onChange={() => setQuizId(pack.id)}
-                  className="sr-only"
-                />
-                <span className="title-clamp block font-semibold" title={pack.title}>
-                  {pack.title}
-                  {pack.tonight ? (
-                    <span className="ml-2 rounded-full bg-lime-300 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-black">
-                      Tonight
-                    </span>
-                  ) : null}
-                </span>
-                <span className="block text-sm text-white/60">{pack.blurb}</span>
-              </label>
-            ))}
-          </div>
-        </fieldset>
         <fieldset className="space-y-2">
           <legend className="text-sm font-medium text-white/80">Variant</legend>
           <div className="grid grid-cols-2 gap-2">
@@ -259,27 +251,6 @@ export function HomeClient({ initialPackId }: { initialPackId?: string }) {
           levelId={fallbackLevelId}
         />
       ) : null}
-
-      <HomeworkScanCard
-        busy={busy === "extract"}
-        pages={[]}
-        capMessage={null}
-        truncated={false}
-        onFiles={(files) => {
-          stashPendingScan(files);
-          router.push("/homework");
-        }}
-        onRemove={() => undefined}
-        onStart={() => undefined}
-        onDemo={(fixtureId) => {
-          stashPendingDemo(fixtureId);
-          router.push("/homework");
-        }}
-        onPaste={() => {
-          stashPendingPaste();
-          router.push("/homework");
-        }}
-      />
 
       {pathLevels.length ? (
         <section className="card space-y-2">

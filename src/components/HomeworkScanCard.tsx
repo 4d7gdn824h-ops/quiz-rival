@@ -43,7 +43,7 @@ export function HomeworkScanCard({
   }
 
   return (
-    <section className="card space-y-3">
+    <section className="card space-y-3" data-testid="scan-card">
       <div className="space-y-1">
         <p className="text-[0.7rem] font-semibold uppercase tracking-[0.22em] text-orange-300">
           Tonight’s homework
