@@ -35,8 +35,8 @@ function level(index, fact, topic) {
   return {
     title: topic,
     theme: `stop-${index}`,
-    questionsA: [question("Which note is on the page")],
-    questionsB: [question("Rematch")],
+    questionsA: [question("Which note is on the page"), question("Second note")],
+    questionsB: [question("Rematch"), question("Rematch again")],
   };
 }
 
