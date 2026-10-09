@@ -11,8 +11,9 @@ import {
   type LocalPlaySetup,
 } from "@/lib/client/local-play";
 import { markLevelCompleted, readCompletedLevelIds } from "@/lib/client/path-progress";
-import { questionSpeechText, readAloudIdleLabel } from "@/lib/client/speech";
+import { cancelSpeech, questionSpeechText, readAloudIdleLabel } from "@/lib/client/speech";
 import { QUESTION_MS } from "@/lib/constants";
+import { pauseQuestionClock, resumeQuestionClock } from "@/lib/question-clock";
 import { roundFromKit } from "@/lib/play/round-from-kit";
 import type { PublicRound } from "@/lib/play/types";
 import { turnLabel } from "@/lib/copy";
@@ -42,6 +43,8 @@ export function LocalPlay() {
   const beginRef = useRef<
     (questionIndex: number, player: 0 | 1, nextScores?: [number, number]) => void
   >(() => undefined);
+  const finishTurnRef = useRef<(choice: string | null) => void>(() => undefined);
+  const pausedRef = useRef(false);
 
   useEffect(() => {
     beginRef.current = (questionIndex, player, nextScores = scores) => {
@@ -156,12 +159,21 @@ export function LocalPlay() {
   );
 
   useEffect(() => {
+    finishTurnRef.current = (choice) => {
+      void finishTurn(choice);
+    };
+    pausedRef.current = paused;
+  }, [finishTurn, paused]);
+
+  useEffect(() => {
     if (phase !== "question" || paused || !endsAt) return;
+    const deadline = endsAt;
     const id = window.setInterval(() => {
-      if (Date.now() >= endsAt) void finishTurn(null);
+      if (pausedRef.current) return;
+      if (Date.now() >= deadline) void finishTurnRef.current(null);
     }, 200);
     return () => window.clearInterval(id);
-  }, [endsAt, finishTurn, paused, phase]);
+  }, [endsAt, paused, phase]);
 
   function handoffReady() {
     if (!setup) return;
@@ -175,14 +187,19 @@ export function LocalPlay() {
   }
 
   function togglePause() {
-    if (phase !== "question" || !endsAt) return;
+    if (phase !== "question") return;
+    const now = Date.now();
     if (!paused) {
-      setFrozenMs(Math.max(0, endsAt - Date.now()));
+      if (endsAt == null) return;
+      cancelSpeech();
+      const next = pauseQuestionClock({ endsAt, remainingMs: frozenMs, paused: false }, now);
+      setFrozenMs(next.remainingMs);
       setPaused(true);
       setEndsAt(null);
       return;
     }
-    setEndsAt(Date.now() + (frozenMs ?? QUESTION_MS));
+    const next = resumeQuestionClock({ endsAt: null, remainingMs: frozenMs, paused: true }, now);
+    setEndsAt(next.endsAt);
     setFrozenMs(null);
     setPaused(false);
   }
@@ -360,13 +377,19 @@ function QuestionCard({
       </p>
       <TimerBar endsAt={endsAt} frozenRemainingMs={frozenMs} totalMs={QUESTION_MS} />
       {paused ? null : (
-        <button type="button" className="btn-secondary" onClick={onPause} disabled={busy}>
+        <button
+          type="button"
+          className="btn-secondary"
+          data-testid="pause-quiz"
+          onClick={onPause}
+          disabled={busy}
+        >
           Pause
         </button>
       )}
       <div className="relative space-y-4">
         <div className={`space-y-4 ${paused ? "pointer-events-none select-none" : ""}`} inert={paused ? true : undefined}>
-          <article className="card space-y-4" data-testid={index === 0 ? "question-1" : undefined}>
+          <article className="card space-y-4" data-testid={`question-${index + 1}`}>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lime-300">
               Question {index + 1} / {total}
               {levelTitle ? ` · ${levelTitle}` : ""}
@@ -385,6 +408,7 @@ function QuestionCard({
                 key={option.id}
                 type="button"
                 className={`answer ${picked === option.id ? "answer-on" : ""}`}
+                data-testid="answer-option"
                 disabled={Boolean(picked) || busy || paused}
                 onClick={() => onPick(option.id)}
               >
@@ -405,7 +429,7 @@ function QuestionCard({
             data-paused="true"
           >
             <p className="font-display text-5xl font-bold">Paused</p>
-            <button type="button" className="btn-primary" onClick={onPause}>
+            <button type="button" className="btn-primary" data-testid="resume-quiz" onClick={onPause}>
               Resume
             </button>
           </div>

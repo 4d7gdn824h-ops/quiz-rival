@@ -15,7 +15,7 @@ Two phones on the same Wi-Fi, or **two browser windows** (even in one profile). 
 
 ## Create / Join flow
 
-1. **Create room (host)** — enter a display name, pick a pack (`Warm-up (EN)`, or **Tonight’s pack** after a scan), pick variant **A** or **B**, tap **Create room**. You get a **4-letter code**.
+1. **Create room (host)** — enter a display name, pick variant **A** or **B**, tap **Create room**. The room uses tonight’s scan when there is one, otherwise the warm-up pack. You get a **4-letter code**.
 2. **Join room** — sibling enters the same name field + the 4-letter code, tap **Join room**.
 3. Host taps **Start**. Every question has a shared **25 second** countdown (`QUESTION_SECONDS` in `src/lib/constants.ts`). Either player can tap **Pause** to freeze that clock and lock answers; **Resume** continues the same question without resetting scores.
 4. Each device answers independently. The live scoreboard updates; student screens never show keys or English parent hints.
@@ -24,7 +24,7 @@ Two phones on the same Wi-Fi, or **two browser windows** (even in one profile). 
 
 ## Homework scan (scan → play)
 
-Create room stays the first-fold CTA. Directly under it: a **Photo/PDF drop zone**.
+The **Scan worksheet** card is the first thing on the home screen, above Create room and Join room.
 
 Flow: **add up to 6 photos or PDF pages → loading checklist → the quiz plays** (tiny-path node 1). No topic, grade, or name step. The player name defaults to **You**. Topics and difficulty come from the pages.
 
@@ -114,7 +114,7 @@ Environment variables (Project → Settings → Environment Variables):
 | `NEXT_PUBLIC_SUPABASE_URL` | No | Both Supabase vars are required for two-phone rooms on Vercel. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | No | Public anon key. Not an AI secret. |
 
-Without Supabase, a reviewer can still test alone: home → demo worksheet or paste → the quiz on this phone. Create room stays the primary button. Scan stays under it.
+Without Supabase, a reviewer can still test alone: home → demo worksheet or paste → the quiz on this phone. Scan is the first card. Create room and Join room sit under it.
 
 Uploads are not stored after processing. There are no third-party analytics or ads.
 

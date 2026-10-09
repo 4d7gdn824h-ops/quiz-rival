@@ -8,6 +8,7 @@ import {
   QUESTION_MS,
 } from "@/lib/constants";
 import { getPlayQuestions } from "@/lib/levels/resolve";
+import { freezeRemaining, resumeDeadline } from "@/lib/question-clock";
 import { identityOrder, randomId, randomRoomCode, shuffledOrder } from "@/lib/ids";
 import type { Answer, Player, Room, RoomState } from "./types";
 
@@ -204,7 +205,7 @@ export function pauseState(state: RoomState, actorId: string, now = Date.now()):
   }
   if (state.room.paused) return state;
   const remaining = state.room.questionEndsAt
-    ? Math.max(0, state.room.questionEndsAt - now)
+    ? freezeRemaining(state.room.questionEndsAt, now)
     : 0;
   const next = cloneState(state);
   next.room.paused = true;
@@ -222,7 +223,7 @@ export function resumeState(state: RoomState, actorId: string, now = Date.now())
   const remaining = Math.max(0, state.room.pausedRemainingMs ?? 0);
   const next = cloneState(state);
   clearPause(next.room);
-  next.room.questionEndsAt = now + remaining;
+  next.room.questionEndsAt = resumeDeadline(remaining, now);
   return next;
 }
 

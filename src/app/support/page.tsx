@@ -23,7 +23,7 @@ export default function SupportPage() {
       <section className="card space-y-2">
         <h2 className="font-display text-2xl">How do I create a room?</h2>
         <p className="text-sm leading-relaxed text-white/75">
-          Type a display name, pick a quiz pack, then tap Create room. When two phones can
+          Type a display name, then tap Create room. When two phones can
           connect, you get a 4-letter code. The other person types that code and taps Join
           room. The host taps Start. Each question has 25 seconds.
         </p>
@@ -36,7 +36,7 @@ export default function SupportPage() {
       <section className="card space-y-2">
         <h2 className="font-display text-2xl">How does scan work?</h2>
         <p className="text-sm leading-relaxed text-white/75">
-          Under Create room, add a homework photo, a PDF, or paste the page. You can also
+          At the top of the home screen, add a homework photo, a PDF, or paste the page. You can also
           open a demo worksheet. The quiz starts on this phone. Nothing asks you to edit
           or approve topics. Create room, and its name field, stay separate from that.
         </p>

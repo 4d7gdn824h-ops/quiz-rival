@@ -405,6 +405,7 @@ export function RoomClient({ code }: { code: string }) {
               ref={pauseButtonRef}
               type="button"
               className="btn-secondary"
+              data-testid="pause-quiz"
               onClick={() => void onPauseToggle("pause")}
               disabled={busy}
             >
@@ -441,6 +442,7 @@ export function RoomClient({ code }: { code: string }) {
                       type="button"
                       onClick={() => void onAnswer(option.id)}
                       disabled={locked}
+                      data-testid="answer-option"
                       className={`answer ${selected ? "answer-on" : ""}`}
                     >
                       <span className="font-display text-xl text-lime-300">{option.id}</span>
@@ -477,6 +479,7 @@ export function RoomClient({ code }: { code: string }) {
                   ref={resumeButtonRef}
                   type="button"
                   className="btn-primary"
+                  data-testid="resume-quiz"
                   onClick={() => void onPauseToggle("resume")}
                   disabled={busy}
                 >
