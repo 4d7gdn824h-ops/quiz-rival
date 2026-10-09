@@ -44,6 +44,8 @@ export interface GeneratedHomeworkPack {
   notes: ExtractedNotes;
   mode: HomeworkMode;
   createdAt: number;
+  /** SHA-256 of the parent key. The raw secret is never stored. */
+  parentKeyHash: string;
 }
 
 export interface PublicHomeworkPack extends PackCatalogItem {

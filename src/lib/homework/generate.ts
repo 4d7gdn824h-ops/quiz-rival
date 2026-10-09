@@ -3,7 +3,7 @@ import "server-only";
 import { createHash } from "crypto";
 import type { Level, QuizPackFile, QuizQuestion, QuizVariant } from "@/data/types";
 import { GameError } from "@/lib/game/engine";
-import { randomId } from "@/lib/ids";
+import { hashParentKey, newParentKey, randomPackId } from "@/lib/pack-access";
 import { notesFromKeptLines } from "./fixture";
 import { detectLanguage, normalizeQuizLanguage } from "./language";
 import { homeworkMode } from "./mode";
@@ -43,9 +43,10 @@ export function fixturePackFromNotes(rawNotes: ExtractedNotes): {
 
 export async function generateHomeworkPack(
   rawNotes: ExtractedNotes,
-): Promise<GeneratedHomeworkPack> {
+): Promise<GeneratedHomeworkPack & { parentKey: string }> {
   const mode = homeworkMode();
   const prepared = prepareNotes(rawNotes);
+  const id = randomPackId();
   let notes = prepared;
   let pack: QuizPackFile | undefined;
   let levels: Level[] | undefined;
@@ -53,7 +54,7 @@ export async function generateHomeworkPack(
 
   if (mode === "xai") {
     try {
-      const generated = await generateWithLlm(randomId("hw"), prepared);
+      const generated = await generateWithLlm(id, prepared);
       validatePack(generated.pack, generated.levels);
       pack = generated.pack;
       levels = generated.levels;
@@ -67,9 +68,9 @@ export async function generateHomeworkPack(
 
   if (!pack || !levels) {
     try {
-      const built = fixturePackFromNotes(rawNotes);
+      const built = buildDeterministicPack(id, prepared);
       validatePack(built.pack, built.levels);
-      notes = built.notes;
+      notes = prepared;
       pack = built.pack;
       levels = built.levels;
       usedMode = "fixture";
@@ -83,6 +84,7 @@ export async function generateHomeworkPack(
   }
 
   validatePack(pack, levels);
+  const parentKey = newParentKey();
   const generated: GeneratedHomeworkPack = {
     id: pack.id,
     pack,
@@ -91,9 +93,10 @@ export async function generateHomeworkPack(
     notes,
     mode: usedMode,
     createdAt: Date.now(),
+    parentKeyHash: hashParentKey(parentKey),
   };
   saveGeneratedPack(withoutUpload(generated));
-  return generated;
+  return { ...withoutUpload(generated), parentKey };
 }
 
 function withoutUpload(pack: GeneratedHomeworkPack): GeneratedHomeworkPack {

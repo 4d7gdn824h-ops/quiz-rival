@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { PACK_CATALOG } from "@/data/catalog";
-import { getPack } from "@/data/quizzes";
+import { PACK_CATALOG, getCatalogItem } from "@/data/catalog";
 import type { QuizVariant } from "@/data/types";
-import { listPublicCatalog } from "@/lib/packs/public-catalog";
+import { ParentKeyClient } from "@/components/ParentKeyClient";
+import { loadAnswerKey } from "@/lib/homework/answer-key";
 
 export default async function ParentKeyPage({
   searchParams,
@@ -10,15 +10,10 @@ export default async function ParentKeyPage({
   searchParams: Promise<{ pack?: string; variant?: string }>;
 }) {
   const query = await searchParams;
-  const catalog = listPublicCatalog();
-  const packId = query.pack ?? catalog.find((item) => item.tonight)?.id ?? "warmup-en";
   const variant = (query.variant === "B" ? "B" : "A") as QuizVariant;
-  const pack = getPack(packId) ?? getPack("warmup-en");
-  if (!pack) {
-    return <p className="p-6">Pack not found.</p>;
-  }
-  const questions = pack.variants[variant];
-  const navItems = catalog.length ? catalog : PACK_CATALOG;
+  const requested = query.pack ?? "warmup-en";
+  const builtIn = Boolean(getCatalogItem(requested));
+  const initial = builtIn ? loadAnswerKey({ packId: requested, variant, parentKey: null }) : null;
 
   return (
     <main className="mx-auto w-full max-w-lg space-y-6 px-4 py-8">
@@ -27,17 +22,16 @@ export default async function ParentKeyPage({
       </p>
       <h1 className="font-display text-4xl">Answer key</h1>
       <p className="text-white/70">
-        English hints for supervising a quiz. This page is not linked from student play
-        screens. Generated packs live in this server process (same as rooms) — regenerate if
-        the demo server restarted.
+        English hints for a quiz this device created, or for a built-in demo. Other
+        families&apos; worksheets are not listed here.
       </p>
       <nav className="flex flex-wrap gap-2">
-        {navItems.map((item) => (
+        {PACK_CATALOG.map((item) => (
           <Link
             key={item.id}
             href={`/parent/key?pack=${item.id}&variant=${variant}`}
             className={`rounded-full px-3 py-2 text-sm ${
-              item.id === pack.id ? "bg-lime-300 text-black" : "bg-white/10"
+              item.id === initial?.id ? "bg-lime-300 text-black" : "bg-white/10"
             }`}
           >
             <span className="title-clamp" title={item.title}>
@@ -48,32 +42,19 @@ export default async function ParentKeyPage({
         {(["A", "B"] as const).map((option) => (
           <Link
             key={option}
-            href={`/parent/key?pack=${pack.id}&variant=${option}`}
+            href={`/parent/key?pack=${builtIn ? requested : "warmup-en"}&variant=${option}`}
             className={`rounded-full px-3 py-2 text-sm ${
-              option === variant ? "bg-white text-black" : "bg-white/10"
+              option === variant && builtIn ? "bg-white text-black" : "bg-white/10"
             }`}
           >
             Variant {option}
           </Link>
         ))}
       </nav>
-      <ol className="space-y-4">
-        {questions.map((question, index) => {
-          const correct = question.options.find((o) => o.id === question.correctOptionId);
-          return (
-            <li key={question.id} className="card space-y-2">
-              <p className="text-xs uppercase tracking-wide text-white/50">
-                {index + 1}. {question.prompt}
-              </p>
-              <p className="font-semibold">
-                Key: {question.correctOptionId}
-                {correct ? ` — ${correct.text}` : ""}
-              </p>
-              <p className="text-sm text-lime-200">{question.parentHint}</p>
-            </li>
-          );
-        })}
-      </ol>
+      {initial ? (
+        <p className="text-sm text-white/55">{initial.title}</p>
+      ) : null}
+      <ParentKeyClient initial={initial} variant={variant} />
       <Link className="inline-block text-white/60 underline underline-offset-4" href="/">
         Back to QuizRival
       </Link>

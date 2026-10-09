@@ -12,6 +12,7 @@ const SECRET_KEYS = new Set([
   "parentHints",
   "answerKey",
   "answerKeys",
+  "parentKeyHash",
 ]);
 
 export function toPublicQuestion(question: QuizQuestion): PublicQuestion {

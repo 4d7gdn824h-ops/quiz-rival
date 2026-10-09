@@ -1,13 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { PACK_CATALOG } from "@/data/catalog";
 import { listTinyLevels } from "@/data/levels";
 import type { PublicLevel, QuizVariant } from "@/data/types";
 import { createRoom, fetchPackCatalog, fetchRoomService, joinRoom } from "@/lib/client/api";
 import { writeLocalPlay } from "@/lib/client/local-play";
 import { readTonightPackId } from "@/lib/client/homework-draft";
+import { parentKeyHref, readParentKey } from "@/lib/client/parent-key";
 import { stashPendingDemo, stashPendingPaste, stashPendingScan } from "@/lib/client/pending-scan";
 import { readCompletedLevelIds } from "@/lib/client/path-progress";
 import { writeSession } from "@/lib/client/session";
@@ -17,6 +18,11 @@ import { toPublicLevel } from "@/lib/public-quiz";
 import { HomeworkScanCard } from "./HomeworkScanCard";
 import { RoomFallback } from "./RoomFallback";
 import { TinyPath } from "./TinyPath";
+
+function subscribeParentKey(onStoreChange: () => void) {
+  window.addEventListener("storage", onStoreChange);
+  return () => window.removeEventListener("storage", onStoreChange);
+}
 
 function asClientPack(item: (typeof PACK_CATALOG)[number]): PublicHomeworkPack {
   return {
@@ -69,6 +75,16 @@ export function HomeClient({ initialPackId }: { initialPackId?: string }) {
   );
 
   const [completedIds, setCompletedIds] = useState<string[]>([]);
+  const answerKeyHref = useSyncExternalStore(
+    subscribeParentKey,
+    () => {
+      const tonightId = readTonightPackId();
+      const secret = tonightId ? readParentKey(tonightId) : null;
+      if (tonightId && secret) return parentKeyHref(tonightId, variant, secret);
+      return parentKeyHref(quizId, variant, null);
+    },
+    () => parentKeyHref(quizId, variant, null),
+  );
 
   useEffect(() => {
     const sync = () => setCompletedIds(readCompletedLevelIds(quizId));
@@ -335,7 +351,7 @@ export function HomeClient({ initialPackId }: { initialPackId?: string }) {
         Parent?{" "}
         <a
           className="underline decoration-white/30 underline-offset-4"
-          href={`/parent/key${selected ? `?pack=${selected.id}&variant=${variant}` : ""}`}
+          href={answerKeyHref}
         >
           Answer key + English hints
         </a>

@@ -157,6 +157,7 @@ export type ScanPlayResult = {
   notes: ExtractedNotes;
   pack: PublicHomeworkPack;
   playKit: PlayKit;
+  parentKey: string;
 };
 
 export async function scanHomeworkRequest(
@@ -186,7 +187,7 @@ export async function scanHomeworkRequest(
 }
 
 export async function generateHomeworkRequest(notes: ExtractedNotes, opts?: ScanRequestOpts) {
-  return postScan<{ mode: HomeworkMode; pack: PublicHomeworkPack; playKit: PlayKit }>(
+  return postScan<{ mode: HomeworkMode; pack: PublicHomeworkPack; playKit: PlayKit; parentKey: string }>(
     "/api/homework/generate",
     JSON.stringify({ notes }),
     { "Content-Type": "application/json" },

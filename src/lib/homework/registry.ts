@@ -4,9 +4,9 @@ import { ROOM_TTL_MS } from "@/lib/constants";
 import type { GeneratedHomeworkPack } from "./types";
 
 /**
- * Generated quizzes can live in this process so a single Node server can host
- * a room. Raw uploads are not stored here. Extracts are not kept after the
- * response is sent.
+ * Scanned quizzes live only in this process, pruned with the room TTL (6 hours,
+ * inside a 24-hour cap). Raw uploads are not stored. The parent-key secret is
+ * not stored — only its hash. Do not list these packs from a public route.
  */
 const g = globalThis as unknown as {
   quizRivalHomework?: {

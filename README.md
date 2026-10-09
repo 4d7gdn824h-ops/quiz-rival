@@ -20,7 +20,7 @@ Two phones on the same Wi-Fi, or **two browser windows** (even in one profile). 
 3. Host taps **Start**. Every question has a shared **25 second** countdown (`QUESTION_SECONDS` in `src/lib/constants.ts`). Either player can tap **Pause** to freeze that clock and lock answers; **Resume** continues the same question without resetting scores.
 4. Each device answers independently. The live scoreboard updates; student screens never show keys or English parent hints.
 5. After the last question: **winner screen**. Host taps **Rematch** (same room, switches A↔B and reshuffles).
-6. Parents can open `/parent/key` (also linked from the host winner screen) for keys + English hints.
+6. Parents open the answer key from the phone that created the quiz (also linked from the host winner screen). Built-in demos stay on `/parent/key`. A scanned key is not available from the pack id alone.
 
 ## Homework scan (scan → play)
 
@@ -32,7 +32,7 @@ Flow: **add up to 6 photos or PDF pages → loading checklist → the quiz plays
 2. **Make the quiz** sends every page in one request. The browser shrinks each image (1600px long edge, then smaller and lower quality) so the JSON body stays under about 4MB. The server rejects a larger body with `body_too_large`.
 3. The quiz opens on this phone. Questions come from the page content. Student screens never show answer keys.
 
-Student APIs (`/api/rooms`, `/api/packs`, the scan response) **strip** `correctOptionId` / `parentHint`. Keys exist only on `/parent/key`.
+Student APIs (`/api/rooms`, `/api/packs`, the scan response) **strip** `correctOptionId` / `parentHint`. `/api/packs` lists only the built-in warm-up, never scanned quizzes. The scan response returns a `parentKey` once; the phone stores it in localStorage and opens `/parent/key#…` (the secret stays in the fragment, not the query string). A wrong or missing secret is a 404.
 
 ### Fixture mode (no API key)
 

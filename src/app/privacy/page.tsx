@@ -44,7 +44,9 @@ export default function PrivacyPage() {
           After we finish reading it, we do not save the photo, the PDF, or the pasted text.
           We do not put the file in a database. We do not keep a copy for later. This phone
           can hold the quiz until you close the tab, so you can still practice. Closing the
-          tab clears that.
+          tab clears that. The answer-key secret for a quiz you created stays in this
+          browser until you clear its saved data. Other people cannot open that key
+          without it.
         </p>
       </section>
 

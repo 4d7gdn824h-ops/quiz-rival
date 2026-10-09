@@ -1,7 +1,7 @@
 import "server-only";
 
 import { MAX_SCAN_PAGES, PAGE_CAP_MESSAGE } from "@/lib/client/scan-prep";
-import { getPublicPack } from "@/lib/packs/public-catalog";
+import { toCreatorPack } from "@/lib/packs/public-catalog";
 import { toPlayKit } from "@/lib/play/kit";
 import { sealAnswerMap } from "@/lib/play/seal";
 import { assertNoQuizSecrets } from "@/lib/public-quiz";
@@ -56,21 +56,14 @@ export async function scanHomework(input: {
     const generateStarted = Date.now();
     const generated = await generateHomeworkPack(notes);
     generateMs = Date.now() - generateStarted;
-    const pack = getPublicPack(generated.id);
-    if (!pack) {
-      throw new HomeworkError(
-        "We read your page but couldn't build the quiz.",
-        "generate_failed",
-        500,
-      );
-    }
     const gradeSeal = generated.mode === "xai" ? sealAnswerMap(generated.pack) : null;
     const payload = {
       mode: generated.mode,
       notice: extracted.notice ?? null,
       notes: clientNotes(notes),
-      pack,
+      pack: toCreatorPack(generated),
       playKit: toPlayKit(generated.pack, generated.levels, gradeSeal),
+      parentKey: generated.parentKey,
     };
     assertNoQuizSecrets(payload, "scan");
     return { payload, pages: pages.length, extractMs, generateMs, finishReason };

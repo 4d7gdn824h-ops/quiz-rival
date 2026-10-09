@@ -3,8 +3,8 @@ import "server-only";
 import { PACK_CATALOG } from "@/data/catalog";
 import { listTinyLevels as listStaticTinyLevels } from "@/data/levels";
 import { getPack } from "@/data/quizzes";
-import { listGeneratedPacks } from "@/lib/homework/registry";
 import type { GeneratedHomeworkPack, PublicHomeworkPack, PublicPackDetail } from "@/lib/homework/types";
+import { packsForPublicList } from "@/lib/pack-access";
 import { toPublicLevel } from "@/lib/public-quiz";
 
 function fromStatic(): PublicHomeworkPack[] {
@@ -22,7 +22,8 @@ function fromStatic(): PublicHomeworkPack[] {
   });
 }
 
-function fromGenerated(item: GeneratedHomeworkPack, tonight: boolean): PublicHomeworkPack {
+/** Public shape for the device that just created the pack. Not a lookup by id. */
+export function toCreatorPack(item: GeneratedHomeworkPack): PublicHomeworkPack {
   const variantA = item.pack.variants.A;
   return {
     id: item.pack.id,
@@ -32,31 +33,18 @@ function fromGenerated(item: GeneratedHomeworkPack, tonight: boolean): PublicHom
     blurb: item.pack.source ?? "Tonight's homework scan",
     levelCount: item.levels.filter((level) => !level.mega).length,
     generated: true,
-    tonight,
+    tonight: false,
     hasEssay: false,
     levels: item.levels.filter((level) => !level.mega).map((level) => toPublicLevel(level, "A")),
   };
 }
 
 export function listPublicCatalog(): PublicHomeworkPack[] {
-  const generated = listGeneratedPacks();
-  const tonightId = generated[0]?.id;
-  return [
-    ...generated.map((item) => fromGenerated(item, item.id === tonightId)),
-    ...fromStatic(),
-  ];
+  return packsForPublicList(fromStatic());
 }
 
 export function getPublicPack(id: string): PublicPackDetail | undefined {
-  const generated = listGeneratedPacks().find((item) => item.id === id);
-  if (generated) {
-    const tonightId = listGeneratedPacks()[0]?.id;
-    return {
-      ...fromGenerated(generated, generated.id === tonightId),
-      writing: null,
-    };
-  }
-  const item = fromStatic().find((pack) => pack.id === id);
+  const item = listPublicCatalog().find((pack) => pack.id === id);
   if (!item) return undefined;
   return { ...item, writing: null };
 }
