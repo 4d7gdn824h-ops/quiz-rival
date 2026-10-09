@@ -366,7 +366,7 @@ function QuestionCard({
       )}
       <div className="relative space-y-4">
         <div className={`space-y-4 ${paused ? "pointer-events-none select-none" : ""}`} inert={paused ? true : undefined}>
-          <article className="card space-y-4">
+          <article className="card space-y-4" data-testid={index === 0 ? "question-1" : undefined}>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lime-300">
               Question {index + 1} / {total}
               {levelTitle ? ` · ${levelTitle}` : ""}
