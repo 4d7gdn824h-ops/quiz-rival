@@ -47,11 +47,9 @@ drop policy if exists "rooms open" on rooms;
 drop policy if exists "players open" on players;
 drop policy if exists "answers open" on answers;
 
--- MVP: no auth yet. Open policies so the Next.js app can read/write with the anon key.
--- Tighten before a public launch.
-create policy "rooms open" on rooms for all using (true) with check (true);
-create policy "players open" on players for all using (true) with check (true);
-create policy "answers open" on answers for all using (true) with check (true);
+-- Deny by default. There is no packs table. The anon key cannot list rooms,
+-- players, or answers. Production uses the in-memory store. A later Supabase
+-- path must use the service role; do not add policies for anon.
 
 -- Realtime (ignore error if already added)
 do $$

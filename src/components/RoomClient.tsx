@@ -8,6 +8,7 @@ import {
   markLevelCompleted,
   readCompletedLevelIds,
 } from "@/lib/client/path-progress";
+import { parentKeyHref, readParentKey } from "@/lib/client/parent-key";
 import { readSession, writeSession } from "@/lib/client/session";
 import { cancelSpeech, questionSpeechText, readAloudIdleLabel } from "@/lib/client/speech";
 import type { RoomSnapshot } from "@/lib/game/types";
@@ -604,7 +605,11 @@ function WinnerPanel({
       {isHost ? (
         <Link
           className="block text-sm text-white/55 underline underline-offset-4"
-          href={`/parent/key?pack=${snapshot.room.quizId}&variant=${snapshot.room.variant}`}
+          href={parentKeyHref(
+            snapshot.room.quizId,
+            snapshot.room.variant,
+            readParentKey(snapshot.room.quizId),
+          )}
         >
           Review keys (parent)
         </Link>

@@ -163,6 +163,7 @@ export function HomeworkClient() {
         notes: result.notes,
         mode: result.mode,
         notice: result.notice,
+        parentKey: result.parentKey,
       });
       router.push("/play");
     } catch (error) {
@@ -189,6 +190,7 @@ export function HomeworkClient() {
         notes: result.notes,
         mode: result.mode,
         notice: result.notice,
+        parentKey: result.parentKey,
       });
       router.push("/play");
     } catch (error) {

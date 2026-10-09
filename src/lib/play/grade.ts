@@ -1,7 +1,7 @@
 import "server-only";
 
-import { getPack, listPacks } from "@/data/quizzes";
-import type { QuizQuestion, QuizVariant } from "@/data/types";
+import { getPack } from "@/data/quizzes";
+import type { QuizVariant } from "@/data/types";
 import { GameError } from "@/lib/game/engine";
 import { fixturePackFromNotes } from "@/lib/homework/generate";
 import type { ExtractedNotes } from "@/lib/homework/types";
@@ -34,7 +34,9 @@ export function gradeAnswer(input: {
     }
   }
 
-  const known = findKnownQuestion(input.quizId, input.variant, input.questionId);
+  const known = getPack(input.quizId)?.variants[input.variant]?.find(
+    (question) => question.id === input.questionId,
+  );
   if (known) return known.correctOptionId === choice;
 
   if (input.notes) {
@@ -48,16 +50,3 @@ export function gradeAnswer(input: {
   throw new GameError("That question is not in this practice round.", 404);
 }
 
-function findKnownQuestion(
-  quizId: string,
-  variant: QuizVariant,
-  questionId: string,
-): QuizQuestion | undefined {
-  const direct = getPack(quizId)?.variants[variant]?.find((question) => question.id === questionId);
-  if (direct) return direct;
-  for (const pack of listPacks()) {
-    const question = pack.variants[variant]?.find((item) => item.id === questionId);
-    if (question) return question;
-  }
-  return undefined;
-}

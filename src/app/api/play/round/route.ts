@@ -1,3 +1,4 @@
+import { getCatalogItem } from "@/data/catalog";
 import { assertNoQuizSecrets } from "@/lib/public-quiz";
 import { buildPublicRound } from "@/lib/play/kit";
 import type { QuizVariant } from "@/data/types";
@@ -13,9 +14,12 @@ export async function GET(request: Request) {
   if (!quizId) {
     return Response.json({ error: "Missing quiz" }, { status: 400 });
   }
+  if (!getCatalogItem(quizId)) {
+    return Response.json({ error: "Not found" }, { status: 404 });
+  }
   const round = buildPublicRound(quizId, variant, levelId);
   if (!round) {
-    return Response.json({ error: "That practice pack is not on this server." }, { status: 404 });
+    return Response.json({ error: "Not found" }, { status: 404 });
   }
   assertNoQuizSecrets(round, "round");
   return Response.json(round);

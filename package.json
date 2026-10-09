@@ -9,7 +9,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --experimental-strip-types --test src/lib/client/scan-prep.test.ts src/lib/homework/vision-read.test.ts src/lib/copy.test.ts src/lib/question-clock.test.ts"
+    "test": "node --experimental-strip-types --test src/lib/client/scan-prep.test.ts src/lib/homework/vision-read.test.ts src/lib/copy.test.ts src/lib/question-clock.test.ts src/lib/pack-access.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
