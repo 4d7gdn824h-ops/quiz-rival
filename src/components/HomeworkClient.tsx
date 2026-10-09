@@ -19,7 +19,7 @@ import {
   SLOW_PAGE_NOTE,
 } from "@/lib/client/scan-prep";
 import { startScanPlay } from "@/lib/client/start-scan-play";
-import { takePendingPaste, takePendingScan } from "@/lib/client/pending-scan";
+import { takePendingDemo, takePendingPaste, takePendingScan } from "@/lib/client/pending-scan";
 import { HomeworkScanCard } from "./HomeworkScanCard";
 
 type Stage = "pick" | "preparing" | "uploading" | "reading" | "held" | "paste" | "error";
@@ -39,6 +39,8 @@ export function HomeworkClient() {
   const [attempt, setAttempt] = useState(0);
   const pagesRef = useRef<TrayPage[]>([]);
   const addIncomingRef = useRef<(files: File[]) => Promise<void>>(async () => undefined);
+  const runDemoRef = useRef<(fixtureId: string) => Promise<void>>(async () => undefined);
+  const pendingDemo = useRef<string | null>(null);
   const cancelRef = useRef<AbortController | null>(null);
   const pickRef = useRef<HTMLInputElement>(null);
   const failedPhase = useRef<"extract" | "generate">("extract");
@@ -79,11 +81,18 @@ export function HomeworkClient() {
     setCapMessage(null);
     setScanError(null);
     setStage("preparing");
+    const before = pagesRef.current.length;
     try {
-      const added = await addFilesToTray(pagesRef.current.length, accepted);
-      setPages((current) => [...current, ...added.pages].slice(0, MAX_SCAN_PAGES));
+      const added = await addFilesToTray(before, accepted);
+      const nextPages = [...pagesRef.current, ...added.pages].slice(0, MAX_SCAN_PAGES);
+      pagesRef.current = nextPages;
+      setPages(nextPages);
       setCapMessage(added.message);
       setTruncated((value) => value || added.truncated);
+      if (nextPages.length > before && !added.message) {
+        await runScan({ pages: nextPages });
+        return;
+      }
       setStage("pick");
     } catch (error) {
       showFailure(error, "extract");
@@ -92,15 +101,21 @@ export function HomeworkClient() {
 
   useEffect(() => {
     addIncomingRef.current = addIncoming;
+    runDemoRef.current = runDemo;
   });
 
   useEffect(() => {
     let cancelled = false;
     const pending = takePendingScan();
     const openPaste = takePendingPaste();
+    const demo = takePendingDemo();
     void Promise.resolve().then(() => {
       if (cancelled) return;
       setReady(true);
+      if (demo) {
+        pendingDemo.current = demo;
+        return;
+      }
       if (openPaste) setStage("paste");
       if (pending.length) void addIncomingRef.current(pending);
     });
@@ -180,6 +195,13 @@ export function HomeworkClient() {
       showFailure(error, "extract");
     }
   }
+
+  useEffect(() => {
+    if (!ready || !pendingDemo.current) return;
+    const fixtureId = pendingDemo.current;
+    pendingDemo.current = null;
+    void runDemoRef.current(fixtureId);
+  }, [ready]);
 
   function cancelScan() {
     cancelRef.current?.abort();

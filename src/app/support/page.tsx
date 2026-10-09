@@ -37,8 +37,8 @@ export default function SupportPage() {
         <h2 className="font-display text-2xl">How does scan work?</h2>
         <p className="text-sm leading-relaxed text-white/75">
           Under Create room, add a homework photo, a PDF, or paste the page. You can also
-          open a demo worksheet. Check the lines and uncheck junk. Tap Generate tiny path.
-          Then play that path on this phone, or create a room if two phones are connected.
+          open a demo worksheet. The quiz starts on this phone. Nothing asks you to edit
+          or approve topics. Create room, and its name field, stay separate from that.
         </p>
       </section>
 

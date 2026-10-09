@@ -5,11 +5,10 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { PACK_CATALOG } from "@/data/catalog";
 import { listTinyLevels } from "@/data/levels";
 import type { PublicLevel, QuizVariant } from "@/data/types";
-import { createRoom, fetchPackCatalog, fetchRoomService, joinRoom, scanHomeworkRequest } from "@/lib/client/api";
+import { createRoom, fetchPackCatalog, fetchRoomService, joinRoom } from "@/lib/client/api";
 import { writeLocalPlay } from "@/lib/client/local-play";
 import { readTonightPackId } from "@/lib/client/homework-draft";
-import { stashPendingPaste, stashPendingScan } from "@/lib/client/pending-scan";
-import { startScanPlay } from "@/lib/client/start-scan-play";
+import { stashPendingDemo, stashPendingPaste, stashPendingScan } from "@/lib/client/pending-scan";
 import { readCompletedLevelIds } from "@/lib/client/path-progress";
 import { writeSession } from "@/lib/client/session";
 import type { PublicHomeworkPack } from "@/lib/homework/types";
@@ -156,26 +155,6 @@ export function HomeClient({ initialPackId }: { initialPackId?: string }) {
     }
   }
 
-  async function runDemo(fixtureId: string) {
-    setError(null);
-    setBusy("extract");
-    try {
-      const result = await scanHomeworkRequest({ fixtureId });
-      startScanPlay({
-        packId: result.pack.id,
-        levels: result.pack.levels,
-        playKit: result.playKit,
-        notes: result.notes,
-        mode: result.mode,
-        notice: result.notice,
-      });
-      router.push("/play");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not read that scan");
-      setBusy(null);
-    }
-  }
-
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 px-4 py-6">
       <header className="space-y-1.5 text-center">
@@ -292,7 +271,10 @@ export function HomeClient({ initialPackId }: { initialPackId?: string }) {
         }}
         onRemove={() => undefined}
         onStart={() => undefined}
-        onDemo={(fixtureId) => void runDemo(fixtureId)}
+        onDemo={(fixtureId) => {
+          stashPendingDemo(fixtureId);
+          router.push("/homework");
+        }}
         onPaste={() => {
           stashPendingPaste();
           router.push("/homework");

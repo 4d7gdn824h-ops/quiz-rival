@@ -24,8 +24,8 @@ export default function PrivacyPage() {
       <section className="card space-y-3">
         <h2 className="font-display text-2xl">What you can send</h2>
         <p className="text-sm leading-relaxed text-white/75">
-          You can send a homework photo, a PDF, or words you paste from the page. You also
-          type a display name for the quiz. That is the upload.
+          You can send a homework photo, a PDF, or words you paste from the page. A display
+          name is only for a room you choose to host, not for the scan.
         </p>
       </section>
 
@@ -43,8 +43,8 @@ export default function PrivacyPage() {
         <p className="text-sm leading-relaxed text-white/75">
           After we finish reading it, we do not save the photo, the PDF, or the pasted text.
           We do not put the file in a database. We do not keep a copy for later. This phone
-          can hold the lines you are checking until you close the tab, so you can still
-          practice. Closing the tab clears that.
+          can hold the quiz until you close the tab, so you can still practice. Closing the
+          tab clears that.
         </p>
       </section>
 

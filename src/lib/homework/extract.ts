@@ -43,7 +43,7 @@ export async function extractHomework(input: {
       notes: notesFromRawText(input.rawText, { title: input.title }),
       mode: "fixture",
       notice:
-        "Built notes from the text you pasted. Confirm the language and lines. The pasted text is not saved on the server.",
+        "Built notes from the text you pasted. The pasted text is not saved on the server.",
     });
   }
 
@@ -105,7 +105,7 @@ async function readPdfText(
       notes: local,
       mode: "fixture",
       notice:
-        "Built notes from the text in the PDF. Confirm the language and lines. The file was not saved.",
+        "Built notes from the text in the PDF. The file was not saved.",
     });
   }
   try {

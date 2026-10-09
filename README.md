@@ -2,7 +2,7 @@
 
 Working name (easy to rename). Tagline: **two kids, one quiz, timer, winner.**
 
-Sibling live challenge with hardcoded demo packs **plus** a homework-scan path: photograph tonight’s worksheet, confirm the notes, generate a rivalry pack. No auth or Stripe.
+Sibling live challenge with hardcoded demo packs **plus** a homework-scan path: photograph tonight’s worksheet and the quiz starts. No auth or Stripe.
 
 ## Run locally
 
